@@ -20,6 +20,28 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }
 
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = project.group.toString()
+            artifactId = "SporeAPI"
+            version = project.version.toString()
+
+            artifact(tasks.shadowJar.get()) {
+                builtBy(tasks.shadowJar)
+            }
+
+            artifact(tasks.jar.get()) {
+                builtBy(tasks.jar)
+            }
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
+}
+
 tasks {
     runServer {
         minecraftVersion("1.21")
