@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "2.2.20"
     id("com.gradleup.shadow") version "8.3.0"
     id("xyz.jpenilla.run-paper") version "2.3.1"
+    `maven-publish`
 }
 
 group = "me.clearedSpore"
@@ -33,6 +34,7 @@ kotlin {
 tasks.build {
     dependsOn("shadowJar")
 }
+
 
 tasks.processResources {
     val props = mapOf("version" to version)
