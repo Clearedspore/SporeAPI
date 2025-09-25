@@ -17,7 +17,7 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 - Serialization  
 - And much more!  
 
-> ⚠️ This is not a standalone plugin — it’s an API/library that your plugins can depend on to reduce boilerplate.
+> ⚠️ This is not a plugin — it’s an API/library that your plugins can depend on to reduce boilerplate.
 
 ---
 
