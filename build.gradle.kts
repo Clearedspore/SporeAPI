@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "me.clearedSpore"
-version = "1.2"
+version = "1.4"
 
 repositories {
     mavenCentral()
@@ -44,7 +44,7 @@ publishing {
 
 tasks {
     runServer {
-        minecraftVersion("1.21")
+        minecraftVersion("1.16")
     }
 }
 
