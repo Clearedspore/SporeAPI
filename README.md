@@ -11,9 +11,9 @@ SporeAPI is a Kotlin minecraft API that you can use in your project. It has feat
 # Features
 
 - [Advanced Menu system](#Menu-system)
-- Message util
-- Logger util
-- Chat input feature
+- [Message util](#Messages)
+- [Logger util](#Logger)
+- [Chat input feature](#Chatinput:)
 - Serialization
 - And much more!
 
@@ -77,10 +77,88 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 	}
 ```
 
-# Colors
+# Messages
+
+## Colors
 
 You can easily translate color codes by adding `.translate()` after a string.
+It will translate any `&` color codes and `&#RRGGBB` color codes.
 
+There a few pre-made color codes that you can use such as `.blue()`, `.white()` and `.red()`.
+
+## Message util
+
+There are a lot of utility message methods you can use.
+
+You can call the `Message` class and then you can view all methods.
+
+Some methods are not shown because they are an extension for the `Player` class.
+
+`sendBossBar` is one of them. You can easily send a bossbar by doing `player.sendBossBar(player, text, progress)`.
+
+`sendMessageWithTitle` Will send a title by doing `player.sendMessageWithTitle(player, title, subtitle)`
+
+`endTimedBossBar` Will send a bossbar with a set time. `player.endTimedBossBar(plugin, player, title, progress, duration)`
+
+`sendActionBar` Will send an actionbar.  `player.sendActionBar(player, message)`
+
+`sendSuccessMessage` and `sendErrorMessage` are also 2 `Player` extensions that you can use. Both have a sound that plays when send.
+
+Error message sound: `ENTITY_VILLAGER_NO`
+
+Success message sound: `ENTITY_EXPERIENCE_ORB_PICKUP`
+
+# Logger
+
+The API also has a advanced logger issue for ingame and console logging.
+
+## Setup
+
+First you have to setup the logger by going into your main class and intilizing it in the onEnable method.
+
+```kotlin
+class TestingPlugin : JavaPlugin() {
+
+    override fun onEnable() {
+        Logger.initialize("Your plugin name")
+    }
+
+    override fun onDisable() {
+    }
+}
+```
+
+## Ingame logging
+
+If you want to send an ingame log message you can do that by calling the `Logger.log` method.
+This will send a log to everyone with a set permission.
+
+`log(sender, permission, message)`
+
+## Console logging
+
+There are 6 methods you can call for console logging.
+The simple ones are `info`, `error` and `warn`
+
+These will send a colored message (if your console supports it) with the info you have put in
+
+`info(message)`
+
+`error(message)`
+
+`warn(message)`
+
+`[TestingPlugin] (info) Loading Testing plugin`
+
+If you use a database you can also use a logger for that. Its almost completly the same except for that it has Databse in the plugin name.
+
+`[TestingPlugin Database] (info) Connected to H2 database.`
+
+`infoDB(message)`
+
+`errorDB(message)`
+
+`warnDB(message)`
 
 # Menu system
 
@@ -262,11 +340,21 @@ You only have to call the `addSearchItem()` method and then it will add a pre-ma
 
 When you click on the item it will close the menu and add you to the chat input. Once you have typed your input then it will re-open the menu and apply the search.
 
+**Chatinput:**
+
 You **have** to load the chatinput class in order for this to work. You simply have to go to your main class and load the instance.
 
 The `this` means the main class instance.
 
 Then you can go ahead and go back to the paginated menu class and add the item. It works the same as a normal item. You provide the `x` and `y` coordinates and then the chatinput instance.
+
+If you want to use the chatinput for something else you can simply do this.
+
+```kotlin
+chatInput.awaitChatInput(clicker) { input ->
+	player.sendMessage(input)
+}
+```
 
 ```kotlin
 class TestingPlugin : JavaPlugin() {
