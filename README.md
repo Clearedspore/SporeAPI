@@ -1,6 +1,6 @@
 # SporeAPI
 
-SporeAPI is a Kotlin minecraft API that you can use in your project. It has features such as menus, messages, logger and much more!
+SporeAPI is a Kotlin Minecraft API that you can use in your projects. It includes features such as menus, messages, a logger, and much more!
 
 ![License](https://img.shields.io/github/license/ClearedSpore/SporeAPI)
 ![Latest release](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
@@ -10,14 +10,14 @@ SporeAPI is a Kotlin minecraft API that you can use in your project. It has feat
 
 # Features
 
-- [Advanced Menu system](#Menu-system)
-- [Message util](#Messages)
-- [Logger util](#Logger)
-- [Chat input feature](#Chatinput:)
-- Serialization
-- And much more!
+- [Advanced Menu system](#menu-system)  
+- [Message utility](#messages)  
+- [Logger utility](#logger)  
+- [Chat input feature](#chatinput)  
+- Serialization  
+- And much more!  
 
-> ⚠️ This is not a full plugin — instead, it’s an API / library that your plugins can depend on to reduce boilerplate.
+> ⚠️ This is not a standalone plugin — it’s an API/library that your plugins can depend on to reduce boilerplate.
 
 ---
 
@@ -29,20 +29,20 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 
 #### Repository
 ```xml
-	<repositories>
-		<repository>
-		    <id>jitpack.io</id>
-		    <url>https://jitpack.io</url>
-		</repository>
-	</repositories>
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
 ```
 #### Dependency
 ```xml
-	<dependency>
-	    <groupId>com.github.Clearedspore</groupId>
-	    <artifactId>SporeAPI</artifactId>
-	    <version>1.4</version>
-	</dependency>
+<dependency>
+    <groupId>com.github.Clearedspore</groupId>
+    <artifactId>SporeAPI</artifactId>
+    <version>1.4</version>
+</dependency>
 ```
 
 ## Gradle
@@ -50,71 +50,91 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 ### Groovy
 #### Repository
 ```groovy
-		repositories {
-			mavenCentral()
-			maven { url 'https://jitpack.io' }
-		}
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
 ```
 #### Dependency
 ```groovy
-	dependencies {
-	        implementation 'com.github.Clearedspore:SporeAPI:1.4'
-	}
+dependencies {
+    implementation 'com.github.Clearedspore:SporeAPI:1.4'
+}
 ```
 
 ### Kotlin
 #### Repository
 ```kotlin
-		repositories {
-			mavenCentral()
-			maven { url = uri("https://jitpack.io") }
-		}
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
 ```
 #### Dependency
 ```kotlin
-	dependencies {
-	        implementation("com.github.Clearedspore:SporeAPI:1.4")
-	}
+dependencies {
+    implementation("com.github.Clearedspore:SporeAPI:1.4")
+}
 ```
+
+---
 
 # Messages
 
 ## Colors
 
-You can easily translate color codes by adding `.translate()` after a string.
-It will translate any `&` color codes and `&#RRGGBB` color codes.
+You can easily translate color codes by adding `.translate()` to a string.  
+It supports both `&` color codes and `&#RRGGBB` hex color codes.
 
-There a few pre-made color codes that you can use such as `.blue()`, `.white()` and `.red()`.
+There are also a few pre-made color methods you can use such as `.blue()`, `.white()`, and `.red()`.
 
-## Message util
+## Message utility
 
-There are a lot of utility message methods you can use.
+There are many utility methods for sending messages.
 
-You can call the `Message` class and then you can view all methods.
+You can call the `Message` class to access them. Some methods are not shown directly because they are extensions of the `Player` class.
 
-Some methods are not shown because they are an extension for the `Player` class.
+- `sendBossBar` – Send a bossbar:  
+  ```kotlin
+  player.sendBossBar(player, text, progress)
+  ```
 
-`sendBossBar` is one of them. You can easily send a bossbar by doing `player.sendBossBar(player, text, progress)`.
+- `sendMessageWithTitle` – Send a title and subtitle:  
+  ```kotlin
+  player.sendMessageWithTitle(player, title, subtitle)
+  ```
 
-`sendMessageWithTitle` Will send a title by doing `player.sendMessageWithTitle(player, title, subtitle)`
+- `endTimedBossBar` – Send a timed bossbar:  
+  ```kotlin
+  player.endTimedBossBar(plugin, player, title, progress, duration)
+  ```
 
-`endTimedBossBar` Will send a bossbar with a set time. `player.endTimedBossBar(plugin, player, title, progress, duration)`
+- `sendActionBar` – Send an actionbar:  
+  ```kotlin
+  player.sendActionBar(player, message)
+  ```
 
-`sendActionBar` Will send an actionbar.  `player.sendActionBar(player, message)`
+- `sendSuccessMessage` – Send a success message with sound:  
+  ```kotlin
+  player.sendSuccessMessage("Success!")
+  // Plays ENTITY_EXPERIENCE_ORB_PICKUP
+  ```
 
-`sendSuccessMessage` and `sendErrorMessage` are also 2 `Player` extensions that you can use. Both have a sound that plays when send.
+- `sendErrorMessage` – Send an error message with sound:  
+  ```kotlin
+  player.sendErrorMessage("Error!")
+  // Plays ENTITY_VILLAGER_NO
+  ```
 
-Error message sound: `ENTITY_VILLAGER_NO`
-
-Success message sound: `ENTITY_EXPERIENCE_ORB_PICKUP`
+---
 
 # Logger
 
-The API also has a advanced logger issue for ingame and console logging.
+The API also includes an advanced logger for in-game and console logging.
 
 ## Setup
 
-First you have to setup the logger by going into your main class and intilizing it in the onEnable method.
+First, you need to set up the logger in your main class by initializing it in the `onEnable` method.
 
 ```kotlin
 class TestingPlugin : JavaPlugin() {
@@ -128,41 +148,50 @@ class TestingPlugin : JavaPlugin() {
 }
 ```
 
-## Ingame logging
+## In-game logging
 
-If you want to send an ingame log message you can do that by calling the `Logger.log` method.
-This will send a log to everyone with a set permission.
+If you want to send an in-game log message, you can call the `Logger.log` method.  
+This will send a log to all players with a specific permission.
 
-`log(sender, permission, message)`
+```kotlin
+log(sender, permission, message)
+```
 
 ## Console logging
 
-There are 6 methods you can call for console logging.
-The simple ones are `info`, `error` and `warn`
+There are 6 methods you can call for console logging.  
+The basic ones are `info`, `error`, and `warn`.
 
-These will send a colored message (if your console supports it) with the info you have put in
+These will send a colored message (if your console supports it) with the information you provide:
 
-`info(message)`
+```kotlin
+info(message)
+error(message)
+warn(message)
+```
 
-`error(message)`
+Example output:
+```
+[TestingPlugin] (info) Loading Testing plugin
+```
 
-`warn(message)`
+If you use a database, you can also use the database logger methods.  
+These work the same, except the plugin name includes “Database”:
 
-`[TestingPlugin] (info) Loading Testing plugin`
+```
+[TestingPlugin Database] (info) Connected to H2 database.
+```
 
-If you use a database you can also use a logger for that. Its almost completly the same except for that it has Databse in the plugin name.
-
-`[TestingPlugin Database] (info) Connected to H2 database.`
-
-`infoDB(message)`
-
-`errorDB(message)`
-
-`warnDB(message)`
+Methods:  
+```kotlin
+infoDB(message)
+errorDB(message)
+warnDB(message)
+```
 
 # Menu system
 
-Here I will tell you about the basics on how to make a normal menu and a paginated menu.
+Here I will tell you about the basics on how to make a normal and paginated menu.
 
 ## Normal Menu
 
