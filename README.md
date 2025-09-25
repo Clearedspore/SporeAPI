@@ -2,6 +2,12 @@
 
 SporeAPI is a Kotlin minecraft API that you can use in your project. It has features such as menus, messages, logger and much more!
 
+![License](https://img.shields.io/github/license/ClearedSpore/SporeAPI)
+![Latest release](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
+![Kotlin](https://img.shields.io/badge/kotlin-2.2.20-blueviolet?logo=kotlin)
+![PaperMC](https://img.shields.io/badge/papermc-1.16+-blue?logo=spigotmc)
+![Author](https://img.shields.io/badge/author-ClearedSpore-brightgreen)
+
 # Features
 
 - [Advanced Menu system](#Menu-system)
@@ -337,6 +343,3 @@ You can do that by overiding the `clickSound` method.
 override fun clickSound(): Sound = Sound.ENTITY_ENDER_DRAGON_GROWL
 ```
 
-## License
-
-SporeAPI is licensed under the [MIT License](LICENSE).
