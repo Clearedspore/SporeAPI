@@ -13,7 +13,7 @@ import java.net.URL
 
 object Logger {
 
-    private var pluginName: String = "Plugin"
+    private var pluginName: String = "not initialized"
 
     fun initialize(name: String) {
         pluginName = name

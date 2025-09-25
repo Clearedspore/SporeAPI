@@ -20,8 +20,8 @@ object Message {
     fun broadcastMessageWithPermission(message: String, permission: String) =
         Bukkit.getOnlinePlayers().filter { it.hasPermission(permission) }.forEach { it.sendMessage(message) }
 
-    fun Player.sendBossBar(player: Player, title: String, progress: Float) =
-        createBossBar(title, progress).addPlayer(player)
+    fun Player.sendBossBar(title: String, progress: Float) =
+        createBossBar(title, progress).addPlayer(this.player!!)
 
     fun broadcastBossBar(title: String, progress: Float) =
         createBossBar(title, progress).also { Bukkit.getOnlinePlayers().forEach(it::addPlayer) }
@@ -31,39 +31,32 @@ object Message {
             Bukkit.getOnlinePlayers().filter { p -> p.hasPermission(permission) }.forEach(it::addPlayer)
         }
 
-    fun Player.sendMessageWithTitle(player: Player, title: String, subtitle: String) =
-        player.sendTitle(title, subtitle, 10, 70, 20)
 
     fun Player.endTimedBossBar(
         plugin: JavaPlugin,
-        player: Player,
         title: String,
         progress: Float,
         duration: Long
     ) {
         val bossBar = createBossBar(title, progress)
-        bossBar.addPlayer(player)
+        bossBar.addPlayer(this.player!!)
 
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-            bossBar.removePlayer(player)
+            bossBar.removePlayer(this.player!!)
         }, duration)
     }
 
-    fun Player.sendActionBar(player: Player, message: String) =
-        player.spigot().sendMessage(
-            net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
-            net.md_5.bungee.api.chat.TextComponent(message)
-        )
 
-    fun broadcastActionBar(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendActionBar(it, message) }
-    fun Player.sendSuccessMessage(sender: CommandSender, message: String) {
-        sender.sendMessage("✔ | $message".blue())
-        if (sender is Player) sender.playSound(sender.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
+    fun broadcastActionBar(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendActionBar(message) }
+
+    fun Player.sendSuccessMessage(message: String) {
+        this.sendMessage("✔ | $message".blue())
+        this.playSound(this.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
     }
 
-    fun Player.sendErrorMessage(sender: CommandSender, message: String) {
-        sender.sendMessage("✖ | $message".red())
-        if (sender is Player) sender.playSound(sender.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
+    fun Player.sendErrorMessage(message: String) {
+        this.sendMessage("✖ | $message".red())
+        this.playSound(this.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
     }
 
     private fun createBossBar(title: String, progress: Float): BossBar =
