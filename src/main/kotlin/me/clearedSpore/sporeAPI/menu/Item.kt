@@ -5,6 +5,9 @@ import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 abstract class Item {
     private var cachedItem: ItemStack? = null
 

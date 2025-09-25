@@ -11,18 +11,25 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 object Message {
 
     fun broadcastMessage(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendMessage(message) }
     fun broadcastMessageWithPermission(message: String, permission: String) =
         Bukkit.getOnlinePlayers().filter { it.hasPermission(permission) }.forEach { it.sendMessage(message) }
 
-    fun Player.sendBossBar(player: Player, title: String, progress: Float) = createBossBar(title, progress).addPlayer(player)
+    fun Player.sendBossBar(player: Player, title: String, progress: Float) =
+        createBossBar(title, progress).addPlayer(player)
+
     fun broadcastBossBar(title: String, progress: Float) =
         createBossBar(title, progress).also { Bukkit.getOnlinePlayers().forEach(it::addPlayer) }
 
     fun broadcastBossBarWithPermission(title: String, progress: Float, permission: String) =
-        createBossBar(title, progress).also { Bukkit.getOnlinePlayers().filter { p -> p.hasPermission(permission) }.forEach(it::addPlayer) }
+        createBossBar(title, progress).also {
+            Bukkit.getOnlinePlayers().filter { p -> p.hasPermission(permission) }.forEach(it::addPlayer)
+        }
 
     fun Player.sendMessageWithTitle(player: Player, title: String, subtitle: String) =
         player.sendTitle(title, subtitle, 10, 70, 20)
@@ -43,7 +50,10 @@ object Message {
     }
 
     fun Player.sendActionBar(player: Player, message: String) =
-        player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent(message))
+        player.spigot().sendMessage(
+            net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
+            net.md_5.bungee.api.chat.TextComponent(message)
+        )
 
     fun broadcastActionBar(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendActionBar(it, message) }
     fun Player.sendSuccessMessage(sender: CommandSender, message: String) {

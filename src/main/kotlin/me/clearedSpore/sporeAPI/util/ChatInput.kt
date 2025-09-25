@@ -12,6 +12,9 @@ import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
 import java.util.function.Consumer
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 class ChatInput(private val plugin: JavaPlugin) : Listener {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()

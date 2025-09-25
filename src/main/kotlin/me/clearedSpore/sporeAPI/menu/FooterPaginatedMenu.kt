@@ -24,6 +24,9 @@ import org.bukkit.plugin.java.JavaPlugin
  * Use the BasePaginated menu class!
  */
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 abstract class FooterPaginatedMenu(protected val plugin: JavaPlugin) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory

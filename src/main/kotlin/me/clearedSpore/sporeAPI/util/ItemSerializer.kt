@@ -8,6 +8,9 @@ import java.util.Base64
 import kotlin.ranges.until
 import kotlin.text.isEmpty
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 object ItemSerializer {
 
     fun itemStackArrayToBase64(items: Array<ItemStack?>): String {

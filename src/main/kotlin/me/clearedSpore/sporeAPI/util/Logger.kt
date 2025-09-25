@@ -8,6 +8,9 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 object Logger {
 
     private var pluginName: String = "Plugin"

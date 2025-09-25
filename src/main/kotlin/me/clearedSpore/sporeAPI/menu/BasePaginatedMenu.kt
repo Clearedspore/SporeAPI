@@ -6,6 +6,7 @@ import me.clearedSpore.sporeAPI.util.ChatInput
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -16,6 +17,9 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
+
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
 
 abstract class BasePaginatedMenu(
     protected val plugin: JavaPlugin,
@@ -37,6 +41,10 @@ abstract class BasePaginatedMenu(
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
+
+    open fun useInventory(): Boolean = false
+    open fun cancelClicks(): Boolean = true
+    open fun clickSound(): Sound = Sound.UI_BUTTON_CLICK
 
     abstract fun getMenuName(): String
     abstract fun getRows(): Int
@@ -229,13 +237,18 @@ abstract class BasePaginatedMenu(
 
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
-        if (event.whoClicked !is Player) return
-        val player = event.whoClicked as Player
+        val player = event.whoClicked as? Player ?: return
         if (event.view.topInventory.holder != this) return
-        event.isCancelled = true
 
         val slot = event.rawSlot
-        if (slot < 0 || slot >= event.view.topInventory.size) return
+        val topSize = event.view.topInventory.size
+
+
+        if (slot >= topSize && !useInventory()) {
+            event.isCancelled = true
+            return
+        }
+
         val clickedItem = event.currentItem ?: return
         if (clickedItem.type == Material.AIR || clickedItem.type.name.contains("GLASS_PANE")) return
 
@@ -250,11 +263,16 @@ abstract class BasePaginatedMenu(
 
         onInventoryClickEvent(player, event.click, event)
 
+        event.isCancelled = cancelClicks()
+
+        player.playSound(player.location, clickSound(), 0.5f, 1.0f)
+
         if (autoRefreshOnClick) {
             setMenuItems()
             player.updateInventory()
         }
     }
+
 
     override fun getInventory(): Inventory = inventory
 }

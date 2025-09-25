@@ -21,6 +21,9 @@ import org.bukkit.plugin.java.JavaPlugin
  */
 
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 abstract class PaginatedMenu(protected val plugin: JavaPlugin) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory

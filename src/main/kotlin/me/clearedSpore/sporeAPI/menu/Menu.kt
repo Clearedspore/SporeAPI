@@ -15,6 +15,9 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.java.JavaPlugin
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory
@@ -24,6 +27,7 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
+
     open fun fillEmptySlots(): Boolean = false
     open fun useInventory(): Boolean = false
     open fun cancelClicks(): Boolean = true

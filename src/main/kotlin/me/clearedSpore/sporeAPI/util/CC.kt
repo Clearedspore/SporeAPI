@@ -1,9 +1,16 @@
 package me.clearedSpore.sporeAPI.util
 
+
+
+
 import net.md_5.bungee.api.ChatColor
 import java.util.regex.Pattern
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 object CC {
+
 
     private val HEX_PATTERN: Pattern = Pattern.compile("(?<!\\\\)(?:\\\\\\\\)*&#[a-fA-F0-9]{6}")
 

@@ -3,6 +3,9 @@ package me.clearedSpore.sporeAPI.util
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
 object Cooldown {
 
     private val cooldownDurations = mutableMapOf<String, Long>()
