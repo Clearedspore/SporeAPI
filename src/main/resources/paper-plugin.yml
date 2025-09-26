@@ -1,6 +1,6 @@
 name: SporeAPI
-version: '1.4'
+version: '1.5'
 main: me.clearedSpore.sporeAPI.SporeAPI
-api-version: '1.16'
+api-version: '1.21'
 load: STARTUP
 authors: [ ClearedSpore ]
