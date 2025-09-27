@@ -1,12 +1,12 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     kotlin("jvm") version "2.2.20"
-    id("com.gradleup.shadow") version "8.3.0"
-    id("xyz.jpenilla.run-paper") version "2.3.1"
     `maven-publish`
 }
 
 group = "me.clearedSpore"
-version = "1.5"
+version = "1.5.2"
 
 repositories {
     mavenCentral()
@@ -20,51 +20,29 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            groupId = project.group.toString()
-            artifactId = "SporeAPI"
-            version = project.version.toString()
-
-            artifact(tasks.shadowJar.get()) {
-                builtBy(tasks.shadowJar)
-            }
-
-            artifact(tasks.jar.get()) {
-                builtBy(tasks.jar)
-            }
-        }
-    }
-
-    repositories {
-        mavenLocal()
-    }
-}
-
-tasks {
-    runServer {
-        minecraftVersion("1.21")
-    }
-}
-
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
-
-tasks.build {
-    dependsOn("shadowJar")
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
 
-
-tasks.processResources {
-    val props = mapOf("version" to version)
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
-    filesMatching("paper-plugin.yml") {
-        expand(props)
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = project.group.toString()
+            artifactId = "SporeAPI"
+            version = project.version.toString()
+            from(components["java"])
+        }
+    }
+    repositories {
+        mavenLocal()
     }
 }
