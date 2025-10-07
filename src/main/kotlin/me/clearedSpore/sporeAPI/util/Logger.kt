@@ -19,12 +19,15 @@ object Logger {
         pluginName = name
     }
 
-    fun log(sender: CommandSender, permission: String, message: String) {
+    fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
         val prefix = "\uD83D\uDEE0 $pluginName » ".blue()
-        Bukkit.getOnlinePlayers().filter { it.hasPermission(permission) }.forEach {
-            it.sendMessage("$prefix&f${sender.name} has $message".blue())
-        }
+        Bukkit.getOnlinePlayers()
+            .filter { it.hasPermission(permission) && (includeSender || it != sender) }
+            .forEach {
+                it.sendMessage("$prefix&f${sender.name} has $message".blue())
+            }
     }
+
 
     fun info(message: String) = Bukkit.getConsoleSender().sendMessage("§9[$pluginName] (info) §f$message")
     fun warn(message: String) = Bukkit.getConsoleSender().sendMessage("§9[$pluginName] §6(warn) §f$message")
