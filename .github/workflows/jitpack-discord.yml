@@ -1,0 +1,33 @@
+
+name: Notify Discord on Release
+
+on:
+  release:
+    types: [published, created, edited]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord notification
+        env:
+            DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: |
+            {
+              "username": "JitPack Bot",
+              "embeds": [
+                {
+                  "title": "🚀 New Release: ${{ github.event.release.tag_name }}",
+                  "description": "${{ github.event.release.name || github.event.repository.name }}",
+                  "url": "${{ github.event.release.html_url }}",
+                  "color": 5814783,
+                  "fields": [
+                    { "name": "Author", "value": "${{ github.actor }}", "inline": true },
+                    { "name": "Repository", "value": "${{ github.repository }}", "inline": true }
+                  ],
+                  "footer": { "text": "JitPack auto-build may take a few minutes..." }
+                }
+              ]
+            }
