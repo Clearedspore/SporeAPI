@@ -1,33 +1,74 @@
-
-name: Notify Discord on Release
+name: Build and Notify Discord
 
 on:
   release:
     types: [published, created, edited]
 
 jobs:
-  notify:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Discord notification
+      # 1️⃣ Notify Discord: Build Started
+      - name: Notify Discord: Build Started
         env:
-            DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         uses: Ilshidur/action-discord@master
         with:
-          args: |
+          args: >
             {
-              "username": "JitPack Bot",
+              "username": "SporeAPI Build",
               "embeds": [
                 {
-                  "title": "🚀 New Release: ${{ github.event.release.tag_name }}",
-                  "description": "${{ github.event.release.name || github.event.repository.name }}",
+                  "title": "⚡ Build Started: ${{ github.event.release.tag_name }}",
+                  "description": "Building the release...",
                   "url": "${{ github.event.release.html_url }}",
-                  "color": 5814783,
-                  "fields": [
-                    { "name": "Author", "value": "${{ github.actor }}", "inline": true },
-                    { "name": "Repository", "value": "${{ github.repository }}", "inline": true }
-                  ],
-                  "footer": { "text": "JitPack auto-build may take a few minutes..." }
+                  "color": 16763904
+                }
+              ]
+            }
+
+      # 2️⃣ Run the Gradle build
+      - name: Run Gradle Build
+        run: ./gradlew build
+        continue-on-error: true
+        id: gradle_build
+
+      # 3️⃣ Notify Discord: Build Success
+      - name: Notify Discord: Build Success
+        if: success() && steps.gradle_build.outcome == 'success'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: >
+            {
+              "username": "SporeAPI Build",
+              "embeds": [
+                {
+                  "title": "✅ Build Succeeded: ${{ github.event.release.tag_name }}",
+                  "description": "Release build completed successfully.",
+                  "url": "${{ github.event.release.html_url }}",
+                  "color": 3066993
+                }
+              ]
+            }
+
+      # 4️⃣ Notify Discord: Build Failed
+      - name: Notify Discord: Build Failed
+        if: failure() || steps.gradle_build.outcome != 'success'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: >
+            {
+              "username": "SporeAPI Build",
+              "embeds": [
+                {
+                  "title": "❌ Build Failed: ${{ github.event.release.tag_name }}",
+                  "description": "Check the build logs: [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                  "url": "${{ github.event.release.html_url }}",
+                  "color": 15158332
                 }
               ]
             }
