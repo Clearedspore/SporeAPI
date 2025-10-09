@@ -41,7 +41,7 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 <dependency>
     <groupId>com.github.Clearedspore</groupId>
     <artifactId>SporeAPI</artifactId>
-    <version>1.5.5</version>
+    <version>1.5.8</version>
 </dependency>
 ```
 
@@ -58,7 +58,7 @@ repositories {
 #### Dependency
 ```groovy
 dependencies {
-    implementation 'com.github.Clearedspore:SporeAPI:1.5.5'
+    implementation 'com.github.Clearedspore:SporeAPI:1.5.8'
 }
 ```
 
@@ -73,7 +73,7 @@ repositories {
 #### Dependency
 ```kotlin
 dependencies {
-    implementation("com.github.Clearedspore:SporeAPI:1.5.5")
+    implementation("com.github.Clearedspore:SporeAPI:1.5.8")
 }
 ```
 
