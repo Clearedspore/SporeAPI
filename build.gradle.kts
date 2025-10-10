@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "me.clearedSpore"
-version = "1.5.2"
+version = "1.6.1"
 
 repositories {
     mavenCentral()
@@ -18,6 +18,7 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.json:json:20250517")
 }
 
 java {
