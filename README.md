@@ -25,6 +25,10 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 
 You can include **SporeAPI** in your project either via **Gradle** or **Maven**.  
 
+Replace the version with the latest API version.
+
+![Latest Version](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
+
 ## Maven
 
 #### Repository
@@ -41,7 +45,7 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 <dependency>
     <groupId>com.github.Clearedspore</groupId>
     <artifactId>SporeAPI</artifactId>
-    <version>1.6.1</version>
+    <version>VERSION</version>
 </dependency>
 ```
 
@@ -58,7 +62,7 @@ repositories {
 #### Dependency
 ```groovy
 dependencies {
-    implementation 'com.github.Clearedspore:SporeAPI:1.6.1'
+    implementation 'com.github.Clearedspore:SporeAPI:VERSION'
 }
 ```
 
@@ -73,7 +77,7 @@ repositories {
 #### Dependency
 ```kotlin
 dependencies {
-    implementation("com.github.Clearedspore:SporeAPI:1.6.1")
+    implementation("com.github.Clearedspore:SporeAPI:VERSION")
 }
 ```
 
