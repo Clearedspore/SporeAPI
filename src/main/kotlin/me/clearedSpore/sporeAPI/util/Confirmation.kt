@@ -1,5 +1,7 @@
 package me.clearedSpore.sporeAPI.util
 
+import me.clearedSpore.sporeAPI.util.CC.red
+import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
@@ -12,7 +14,16 @@ object Confirmation : Listener {
 
     private val pendingConfirmations = mutableSetOf<UUID>()
 
-    fun addPlayer(playerId: UUID) = pendingConfirmations.add(playerId)
+    fun addPlayer(playerId: UUID){
+        val player = Bukkit.getPlayer(playerId)
+        pendingConfirmations.add(playerId)
+        player!!.sendMessage("".red())
+        player.sendMessage("         &bWARNING!!         ".red())
+        player.sendMessage("Are you sure you want to do this?".red())
+        player.sendMessage("This action cannot be undone".red())
+        player.sendMessage("Run the command again to confirm!".red())
+    }
+
     fun removePlayer(playerId: UUID) = pendingConfirmations.remove(playerId)
     fun isPlayerPending(playerId: UUID) = pendingConfirmations.contains(playerId)
 
