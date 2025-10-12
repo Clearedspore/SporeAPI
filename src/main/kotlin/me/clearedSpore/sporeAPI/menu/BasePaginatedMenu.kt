@@ -243,28 +243,37 @@ abstract class BasePaginatedMenu(
         val slot = event.rawSlot
         val topSize = event.view.topInventory.size
 
-
         if (slot >= topSize && !useInventory()) {
             event.isCancelled = true
             return
         }
 
         val clickedItem = event.currentItem ?: return
-        if (clickedItem.type == Material.AIR || clickedItem.type.name.contains("GLASS_PANE")) return
+        if (clickedItem.type == Material.AIR) return
 
-        fixedItems[page]?.get(slot)?.onClickEvent(player, event.click)
-        fixedItems[-1]?.get(slot)?.onClickEvent(player, event.click)
+        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") {
+            event.isCancelled = true
+            return
+        }
+
+        val fixedItem = fixedItems[page]?.get(slot) ?: fixedItems[-1]?.get(slot)
+        if (fixedItem != null) {
+            fixedItem.onClickEvent(player, event.click)
+            inventory.setItem(slot, fixedItem.createItem())
+        }
 
         val bottomRowStart = (getRows() - 1) * 9
         if (slot == bottomRowStart) previousPage()
         if (slot == bottomRowStart + 8) nextPage()
 
-        paginatedItemMap[slot]?.onClickEvent(player, event.click)
+        paginatedItemMap[slot]?.let { item ->
+            item.onClickEvent(player, event.click)
+            inventory.setItem(slot, item.createItem())
+        }
 
         onInventoryClickEvent(player, event.click, event)
 
         event.isCancelled = cancelClicks()
-
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
         if (autoRefreshOnClick) {
@@ -272,6 +281,7 @@ abstract class BasePaginatedMenu(
             player.updateInventory()
         }
     }
+
 
 
     override fun getInventory(): Inventory = inventory
