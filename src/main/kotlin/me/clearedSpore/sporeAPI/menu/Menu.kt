@@ -71,8 +71,13 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
             event.isCancelled = item.cancelClick()
             try {
                 item.onClickEvent(player, event.click)
+
+                val updated = item.createItem()
+                inventory.setItem(slot, updated)
+
                 player.playSound(player.location, clickSound(), 0.5f, 1.0f)
-                if(autoRefreshOnClick){
+
+                if (autoRefreshOnClick) {
                     setMenuItems()
                     player.updateInventory()
                 }
@@ -119,49 +124,6 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
 
     fun updateMenuItem(x: Int, y: Int, item: Item) {
         setMenuItem(x, y, item)
-    }
-
-    fun refreshMenuItem(x: Int, y: Int) {
-        val slot = (y - 1) * 9 + (x - 1)
-        itemMap[slot]?.let {
-            inventory.setItem(slot, it.updateItem())
-        }
-    }
-
-    fun forceRefreshMenuItem(x: Int, y: Int): ItemStack? {
-        val slot = (y - 1) * 9 + (x - 1)
-        return itemMap[slot]?.let {
-            val stack = it.forceRefresh()
-            inventory.setItem(slot, stack)
-            stack
-        }
-    }
-
-    fun forceRefreshMenuItemAtSlot(slot: Int): ItemStack? {
-        return itemMap[slot]?.let {
-            val stack = it.forceRefresh()
-            inventory.setItem(slot, stack)
-            stack
-        }
-    }
-
-    fun refreshAllItems() {
-        itemMap.forEach { (slot, item) ->
-            inventory.setItem(slot, item.updateItem())
-        }
-    }
-
-    fun forceRefreshAllItems() {
-        itemMap.forEach { (slot, item) ->
-            inventory.setItem(slot, item.forceRefresh())
-        }
-    }
-
-    fun smartRefreshItems() {
-        itemMap.forEach { (slot, item) ->
-            val stack = if (item.needsRefresh()) item.forceRefresh() else item.updateItem()
-            inventory.setItem(slot, stack)
-        }
     }
 
     override fun getInventory(): Inventory = inventory!!

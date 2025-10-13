@@ -259,8 +259,11 @@ abstract class BasePaginatedMenu(
         val fixedItem = fixedItems[page]?.get(slot) ?: fixedItems[-1]?.get(slot)
         if (fixedItem != null) {
             fixedItem.onClickEvent(player, event.click)
-            inventory.setItem(slot, fixedItem.createItem())
+            val updated = fixedItem.createItem()
+            inventory.setItem(slot, updated)
         }
+
+
 
         val bottomRowStart = (getRows() - 1) * 9
         if (slot == bottomRowStart) previousPage()
@@ -268,8 +271,10 @@ abstract class BasePaginatedMenu(
 
         paginatedItemMap[slot]?.let { item ->
             item.onClickEvent(player, event.click)
-            inventory.setItem(slot, item.createItem())
+            val updated = item.createItem()
+            inventory.setItem(slot, updated)
         }
+
 
         onInventoryClickEvent(player, event.click, event)
 
