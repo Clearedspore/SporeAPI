@@ -282,11 +282,15 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
         if (autoRefreshOnClick) {
-            setMenuItems()
-            player.updateInventory()
+            refreshInventoryContents(player)
         }
+
     }
 
+    fun refreshInventoryContents(player: Player) {
+        setMenuItems()
+        player.openInventory.topInventory.contents = inventory.contents
+    }
 
 
     override fun getInventory(): Inventory = inventory
