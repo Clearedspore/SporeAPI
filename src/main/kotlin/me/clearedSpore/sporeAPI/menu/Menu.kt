@@ -78,7 +78,7 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
                 player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
                 if (autoRefreshOnClick) {
-                    refreshInventoryContents(player)
+                    open(player)
                 }
             } catch (e: Exception) {
                 player.sendMessage("§cAn error occurred while handling your click.")
@@ -87,11 +87,6 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
         } else if (slot in 0 until topSize) {
             event.isCancelled = cancelClicks()
         }
-    }
-
-    fun refreshInventoryContents(player: Player) {
-        setMenuItems()
-        player.openInventory.topInventory.contents = inventory.contents
     }
 
     @EventHandler
