@@ -282,6 +282,7 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
         if (autoRefreshOnClick) {
+            clearItems()
             setMenuItems()
             player.updateInventory()
         }

@@ -8,20 +8,22 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.java.JavaPlugin
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
-abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
+abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory
-    private val itemMap = mutableMapOf<Int, Item>()
+
+    protected val itemMap = mutableMapOf<Int, Item>()
+
     protected var autoRefreshOnClick: Boolean = true
 
     init {
@@ -34,20 +36,17 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
     open fun clickSound(): Sound = Sound.UI_BUTTON_CLICK
 
     private fun fillEmptySlotsWithGlass() {
-        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE)
-        val meta = grayPane.itemMeta
-        meta?.let {
-            it.setDisplayName(" ")
-            it.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
-            grayPane.itemMeta = it
+        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply {
+            itemMeta = itemMeta?.apply {
+                setDisplayName(" ")
+                addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+            }
         }
 
-        inventory.size.let { size ->
-            for (slot in 0 until size) {
-                val currentItem = inventory.getItem(slot)
-                if (currentItem == null || currentItem.type == Material.AIR) {
-                    inventory.setItem(slot, grayPane)
-                }
+        for (slot in 0 until inventory.size) {
+            val current = inventory.getItem(slot)
+            if (current == null || current.type == Material.AIR) {
+                inventory.setItem(slot, grayPane)
             }
         }
     }
@@ -69,6 +68,7 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
         val item = itemMap[slot]
         if (item != null) {
             event.isCancelled = item.cancelClick()
+
             try {
                 item.onClickEvent(player, event.click)
 
@@ -78,26 +78,43 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
                 player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
                 if (autoRefreshOnClick) {
-                    setMenuItems()
-                    player.updateInventory()
+                    refreshMenu(player)
                 }
+
             } catch (e: Exception) {
                 player.sendMessage("§cAn error occurred while handling your click.")
                 e.printStackTrace()
             }
+
         } else if (slot in 0 until topSize) {
             event.isCancelled = cancelClicks()
         }
     }
 
+    fun clearItems() {
+        itemMap.clear()
+        if (::inventory.isInitialized) inventory.clear()
+    }
+
     @EventHandler
-    fun onInventoryClose(event: org.bukkit.event.inventory.InventoryCloseEvent) {
+    fun onInventoryClose(event: InventoryCloseEvent) {
         if (event.inventory.holder == this && event.player is Player) {
             onClose(event.player as Player)
         }
     }
 
     open fun onClose(player: Player) {}
+
+    fun refreshMenu(player: Player? = null) {
+        clearItems()
+        setMenuItems()
+        if (fillEmptySlots()) fillEmptySlotsWithGlass()
+        if (player != null) {
+            player.updateInventory()
+        } else {
+            inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
+        }
+    }
 
     abstract fun getMenuName(): String
     abstract fun getRows(): Int
@@ -117,8 +134,7 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
     }
 
     fun reloadItems() {
-        inventory.clear()
-        itemMap.clear()
+        clearItems()
         setMenuItems()
     }
 
@@ -126,5 +142,5 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
         setMenuItem(x, y, item)
     }
 
-    override fun getInventory(): Inventory = inventory!!
+    override fun getInventory(): Inventory = inventory
 }
