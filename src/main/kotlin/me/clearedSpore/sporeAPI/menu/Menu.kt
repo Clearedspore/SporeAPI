@@ -78,7 +78,8 @@ abstract class Menu(plugin: JavaPlugin) : InventoryHolder, Listener {
                 player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
                 if (autoRefreshOnClick) {
-                    open(player)
+                    setMenuItems()
+                    player.updateInventory()
                 }
             } catch (e: Exception) {
                 player.sendMessage("§cAn error occurred while handling your click.")
