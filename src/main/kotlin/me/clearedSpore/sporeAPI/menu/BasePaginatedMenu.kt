@@ -264,7 +264,6 @@ abstract class BasePaginatedMenu(
         }
 
 
-
         val bottomRowStart = (getRows() - 1) * 9
         if (slot == bottomRowStart) previousPage()
         if (slot == bottomRowStart + 8) nextPage()
@@ -282,7 +281,6 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
         if (autoRefreshOnClick) {
-            clearItems()
             setMenuItems()
             player.updateInventory()
         }
