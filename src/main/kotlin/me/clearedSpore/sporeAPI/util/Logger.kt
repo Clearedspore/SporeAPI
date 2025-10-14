@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.util
 
+import me.clearedSpore.sporeAPI.event.PlayerPreLogEvent
 import me.clearedSpore.sporeAPI.util.CC.blue
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
@@ -18,17 +19,19 @@ object Logger {
     }
 
     fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
-        val event = me.clearedSpore.sporeAPI.event.PlayerPreLogEvent(sender, permission, message, includeSender)
-        Bukkit.getPluginManager().callEvent(event)
-        if (event.isCancelled) return
-
         val prefix = "\uD83D\uDEE0 $pluginName » ".blue()
+
         Bukkit.getOnlinePlayers()
-            .filter { it.hasPermission(event.permission) && (event.includeSender || it != sender) }
-            .forEach {
-                it.sendMessage("$prefix&f${sender.name} has ${event.message}".blue())
+            .filter { it.hasPermission(permission) && (includeSender || it != sender) }
+            .forEach { player ->
+                val event = PlayerPreLogEvent(player, permission, message, includeSender)
+                Bukkit.getPluginManager().callEvent(event)
+                if (!event.isCancelled) {
+                    player.sendMessage("$prefix&f${sender.name} has ${event.message}".blue())
+                }
             }
     }
+
 
 
 
