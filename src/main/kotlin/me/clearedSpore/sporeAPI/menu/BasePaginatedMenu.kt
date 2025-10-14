@@ -218,6 +218,23 @@ abstract class BasePaginatedMenu(
         })
     }
 
+    fun refreshMenu(player: Player? = null) {
+        if (::inventory.isInitialized) inventory.clear()
+        paginatedItemMap.clear()
+        itemToObjectMap.clear()
+        items.clear()
+
+        createItems()
+
+        setMenuItems()
+
+        if (player != null) {
+            player.updateInventory()
+        } else {
+            inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
+        }
+    }
+
     private fun applySearch() {
         items.clear()
         if (searchQuery.isEmpty()) {
@@ -281,8 +298,7 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
         if (autoRefreshOnClick) {
-            setMenuItems()
-            player.updateInventory()
+            refreshMenu(player)
         }
     }
 
