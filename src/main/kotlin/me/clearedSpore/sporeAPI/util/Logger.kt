@@ -12,15 +12,14 @@ import java.net.URL
 
 object Logger {
 
-    private var pluginName: String = "not initialized"
+    var pluginName: String = "not initialized"
+    var prefix = "\uD83D\uDEE0 $pluginName » ".blue()
 
     fun initialize(name: String) {
         pluginName = name
     }
 
     fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
-        val prefix = "\uD83D\uDEE0 $pluginName » ".blue()
-
         Bukkit.getOnlinePlayers()
             .filter { it.hasPermission(permission) && (includeSender || it != sender) }
             .forEach { player ->

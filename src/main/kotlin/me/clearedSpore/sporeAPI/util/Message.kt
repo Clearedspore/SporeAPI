@@ -16,6 +16,13 @@ import org.bukkit.plugin.java.JavaPlugin
 
 object Message {
 
+    private var usePrefix: Boolean = false
+    private var prefix = Logger.pluginName
+
+    fun init(prefix: Boolean){
+        usePrefix = prefix
+    }
+
     fun broadcastMessage(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendMessage(message) }
     fun broadcastMessageWithPermission(message: String, permission: String) =
         Bukkit.getOnlinePlayers().filter { it.hasPermission(permission) }.forEach { it.sendMessage(message) }
@@ -50,12 +57,20 @@ object Message {
     fun broadcastActionBar(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendActionBar(message) }
 
     fun Player.sendSuccessMessage(message: String) {
-        this.sendMessage("✔ | $message".blue())
+        if(usePrefix) {
+            this.sendMessage("$prefix » ✔ | $message".blue())
+        } else {
+            this.sendMessage("✔ | $message".blue())
+        }
         this.playSound(this.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
     }
 
     fun Player.sendErrorMessage(message: String) {
-        this.sendMessage("✖ | $message".red())
+        if(usePrefix) {
+            this.sendMessage("$prefix » ✖ | $message".red())
+        } else {
+            this.sendMessage("✖ | $message".red())
+        }
         this.playSound(this.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
     }
 
