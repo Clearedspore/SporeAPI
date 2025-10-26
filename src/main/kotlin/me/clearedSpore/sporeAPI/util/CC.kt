@@ -24,8 +24,8 @@ object CC {
         return ChatColor.translateAlternateColorCodes('&', message)
     }
 
-    fun String.white() = "&#BEBEBE$this".translate()
-    fun String.blue() = "&#00CCDE$this".translate()
+    fun String.white() = "&#E2E2E2$this".translate()
+    fun String.blue() = "&#1D91FF$this".translate()
     fun String.orange() = "&#FF5733$this".translate()
     fun String.purple() = "&#9966CC$this".translate()
     fun String.yellow() = "&#E7FF00$this".translate()
@@ -33,7 +33,7 @@ object CC {
     fun String.gold() = "&#FFD700$this".translate()
     fun String.red() = "&#F50000$this".translate()
     fun String.green() = "&#22FF00$this".translate()
-    fun String.aqua() = "&#00D6FF$this".translate()
+    fun String.aqua() = "&#46FC2A$this".translate()
     fun String.pink() = "&#F100FF$this".translate()
     fun String.darkGray() = "&#2B2B2B$this".translate()
     fun String.darkGreen() = "&#003508$this".translate()
