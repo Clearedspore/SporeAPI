@@ -3,7 +3,10 @@ package me.clearedSpore.sporeAPI.util
 
 
 
+import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.md_5.bungee.api.ChatColor
+import net.kyori.adventure.text.Component
 import java.util.regex.Pattern
 
 // Copyright (c) 2025 ClearedSpore
@@ -11,17 +14,27 @@ import java.util.regex.Pattern
 
 object CC {
 
-
     private val HEX_PATTERN: Pattern = Pattern.compile("(?<!\\\\)(?:\\\\\\\\)*&#[a-fA-F0-9]{6}")
+    private val miniMessage = MiniMessage.miniMessage()
+    private val legacySerializer = LegacyComponentSerializer.legacySection()
 
     fun String.translate(): String {
         var message = this
+
         val matcher = HEX_PATTERN.matcher(message)
         while (matcher.find()) {
             val hexCode = matcher.group().substring(1)
             message = message.replace(matcher.group(), ChatColor.of(hexCode).toString())
         }
-        return ChatColor.translateAlternateColorCodes('&', message)
+
+        message = ChatColor.translateAlternateColorCodes('&', message)
+
+        return try {
+            val component: Component = miniMessage.deserialize(message)
+            legacySerializer.serialize(component)
+        } catch (ex: Exception) {
+            message
+        }
     }
 
     fun String.white() = "&#E2E2E2$this".translate()
@@ -32,7 +45,7 @@ object CC {
     fun String.gray() = "&#AAAAAA$this".translate()
     fun String.gold() = "&#FFD700$this".translate()
     fun String.red() = "&#F50000$this".translate()
-    fun String.green() = "&#22FF00$this".translate()
+    fun String.green() = "&#4BFF2F$this".translate()
     fun String.aqua() = "&#46FC2A$this".translate()
     fun String.pink() = "&#F100FF$this".translate()
     fun String.darkGray() = "&#2B2B2B$this".translate()
