@@ -14,6 +14,7 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scheduler.BukkitRunnable
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -25,6 +26,8 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     protected val itemMap = mutableMapOf<Int, Item>()
 
     protected var autoRefreshOnClick: Boolean = true
+    private var autoRefreshTask: BukkitRunnable? = null
+    private var autoRefreshEnabled = true
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -49,6 +52,38 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
                 inventory.setItem(slot, grayPane)
             }
         }
+    }
+
+    fun startAutoRefresh() {
+        stopAutoRefresh()
+
+        if (!autoRefreshEnabled) return
+
+        autoRefreshTask = object : BukkitRunnable() {
+            override fun run() {
+                if (!::inventory.isInitialized) return
+
+                if (inventory.viewers.isNotEmpty()) {
+                    inventory.viewers.filterIsInstance<Player>().forEach { player ->
+                        refreshMenu(player)
+                    }
+                } else {
+                    cancel()
+                }
+            }
+        }
+
+        autoRefreshTask?.runTaskTimer(plugin, 20L, 20L)
+    }
+
+    fun setAutoRefresh(enabled: Boolean) {
+        autoRefreshEnabled = enabled
+        if (!enabled) stopAutoRefresh()
+    }
+
+    fun stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = null
     }
 
     @EventHandler
@@ -100,6 +135,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     fun onInventoryClose(event: InventoryCloseEvent) {
         if (event.inventory.holder == this && event.player is Player) {
             onClose(event.player as Player)
+            stopAutoRefresh()
         }
     }
 
@@ -125,6 +161,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
         setMenuItems()
         if (fillEmptySlots()) fillEmptySlotsWithGlass()
         player.openInventory(inventory)
+        startAutoRefresh()
     }
 
     fun setMenuItem(x: Int, y: Int, item: Item) {

@@ -16,6 +16,7 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scheduler.BukkitRunnable
 import java.util.*
 
 // Copyright (c) 2025 ClearedSpore
@@ -51,6 +52,9 @@ abstract class BasePaginatedMenu(
     abstract fun createItems()
     protected abstract fun onInventoryClickEvent(clicker: Player, clickType: ClickType, event: InventoryClickEvent)
 
+    private var autoRefreshTask: BukkitRunnable? = null
+    private var autoRefreshEnabled = true
+
     fun open(player: Player) {
         inventory = Bukkit.createInventory(this, getRows() * 9, getMenuName())
         createItems()
@@ -84,6 +88,38 @@ abstract class BasePaginatedMenu(
         originalItems.add(stack)
         items.add(stack)
         itemToObjectMap[stack] = item
+    }
+
+    fun startAutoRefresh() {
+        stopAutoRefresh()
+
+        if (!autoRefreshEnabled) return
+
+        autoRefreshTask = object : BukkitRunnable() {
+            override fun run() {
+                if (!::inventory.isInitialized) return
+
+                if (inventory.viewers.isNotEmpty()) {
+                    inventory.viewers.filterIsInstance<Player>().forEach { player ->
+                        refreshMenu(player)
+                    }
+                } else {
+                    cancel()
+                }
+            }
+        }
+
+        autoRefreshTask?.runTaskTimer(plugin, 20L, 20L)
+    }
+
+    fun setAutoRefresh(enabled: Boolean) {
+        autoRefreshEnabled = enabled
+        if (!enabled) stopAutoRefresh()
+    }
+
+    fun stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = null
     }
 
     fun clearItems() {
