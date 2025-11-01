@@ -16,4 +16,14 @@ object StringUtil {
         return listOf(this, *parts).filterNotNull().joinToString(" ")
     }
 
+    fun String.splitPipe(): List<String> {
+        return this.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    fun String.firstPart(): String = this.splitPipe().firstOrNull() ?: this
+
+    fun String.hasFlag(flag: String): Boolean {
+        return this.splitPipe().any { it.equals(flag, ignoreCase = true) }
+    }
+
 }
