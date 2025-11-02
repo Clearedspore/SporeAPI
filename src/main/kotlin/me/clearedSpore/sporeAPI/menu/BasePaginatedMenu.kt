@@ -243,11 +243,13 @@ abstract class BasePaginatedMenu(
             }
 
             override fun onClickEvent(clicker: Player, clickType: ClickType) {
+                clicker.closeInventory()
                 chatInput.awaitChatInput(clicker) { input ->
                     searchQuery = input?.trim()?.lowercase() ?: ""
                     page = 0
                     applySearch()
                     setMenuItems()
+                    open(clicker)
                     if (::inventory.isInitialized) clicker.updateInventory()
                 }
             }
