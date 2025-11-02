@@ -2,6 +2,7 @@ package me.clearedSpore.sporeAPI.util
 
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.red
+import me.clearedSpore.sporeAPI.util.CC.translate
 import org.bukkit.Bukkit
 import org.bukkit.Sound
 import org.bukkit.boss.BarColor
@@ -23,7 +24,7 @@ object Message {
         usePrefix = prefix
     }
 
-    fun broadcastMessage(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendMessage(message) }
+    fun broadcastMessage(message: String) = Bukkit.broadcastMessage(message.translate())
     fun broadcastMessageWithPermission(message: String, permission: String) =
         Bukkit.getOnlinePlayers().filter { it.hasPermission(permission) }.forEach { it.sendMessage(message) }
 
