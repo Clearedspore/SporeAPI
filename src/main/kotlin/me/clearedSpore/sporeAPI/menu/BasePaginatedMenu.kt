@@ -19,24 +19,19 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import java.util.*
 
-// Copyright (c) 2025 ClearedSpore
-// Licensed under the MIT License. See LICENSE file in the project root for details.
-
 abstract class BasePaginatedMenu(
     protected val plugin: JavaPlugin,
     private val footer: Boolean = false
 ) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory
+    protected val originalItems = mutableListOf<Item>()
     protected val items = mutableListOf<ItemStack>()
-    protected val originalItems = mutableListOf<ItemStack>()
     protected val fixedItems = mutableMapOf<Int, MutableMap<Int, Item>>()
     protected val paginatedItemMap = mutableMapOf<Int, Item>()
-
     protected var page = 0
     protected var searchQuery: String = ""
     protected var autoRefreshOnClick: Boolean = true
-
     private val itemToObjectMap = WeakHashMap<ItemStack, Item>()
 
     init {
@@ -46,6 +41,7 @@ abstract class BasePaginatedMenu(
     open fun useInventory(): Boolean = false
     open fun cancelClicks(): Boolean = true
     open fun clickSound(): Sound = Sound.UI_BUTTON_CLICK
+    open fun getStartRow(): Int = if (footer) 1 else 1
 
     abstract fun getMenuName(): String
     abstract fun getRows(): Int
@@ -58,6 +54,7 @@ abstract class BasePaginatedMenu(
     fun open(player: Player) {
         inventory = Bukkit.createInventory(this, getRows() * 9, getMenuName())
         createItems()
+        applySearch()
         setMenuItems()
         player.openInventory(inventory)
     }
@@ -76,45 +73,28 @@ abstract class BasePaginatedMenu(
         }
     }
 
-    fun getItemsPerPage(): Int = if (footer) (getRows() - 2) * 7 else getRows() * 9
-
-    fun addItem(item: ItemStack) {
-        originalItems.add(item)
-        items.add(item)
-    }
+    fun getItemsPerPage(): Int = if (footer) (getRows() - 2) * 7 else (getRows() - getStartRow()) * 9
 
     fun addItem(item: Item) {
+        originalItems.add(item)
         val stack = item.createItem()
-        originalItems.add(stack)
         items.add(stack)
         itemToObjectMap[stack] = item
     }
 
     fun startAutoRefresh() {
         stopAutoRefresh()
-
         if (!autoRefreshEnabled) return
 
         autoRefreshTask = object : BukkitRunnable() {
             override fun run() {
                 if (!::inventory.isInitialized) return
-
                 if (inventory.viewers.isNotEmpty()) {
-                    inventory.viewers.filterIsInstance<Player>().forEach { player ->
-                        refreshMenu(player)
-                    }
-                } else {
-                    cancel()
-                }
+                    inventory.viewers.filterIsInstance<Player>().forEach { refreshMenu(it) }
+                } else cancel()
             }
         }
-
         autoRefreshTask?.runTaskTimer(plugin, 20L, 20L)
-    }
-
-    fun setAutoRefresh(enabled: Boolean) {
-        autoRefreshEnabled = enabled
-        if (!enabled) stopAutoRefresh()
     }
 
     fun stopAutoRefresh() {
@@ -122,22 +102,9 @@ abstract class BasePaginatedMenu(
         autoRefreshTask = null
     }
 
-    fun clearItems() {
-        items.clear()
-        itemToObjectMap.clear()
-        if (::inventory.isInitialized) inventory.clear()
-    }
-
-    fun reloadItems() {
-        inventory.clear()
-        items.clear()
-        fixedItems.clear()
-        paginatedItemMap.clear()
-        page = 0
-        searchQuery = ""
-        originalItems.clear()
-        createItems()
-        setMenuItems()
+    fun setAutoRefresh(enabled: Boolean) {
+        autoRefreshEnabled = enabled
+        if (!enabled) stopAutoRefresh()
     }
 
     fun setGlobalMenuItem(x: Int, y: Int, item: Item) = setMenuItem(x, y, -1, item)
@@ -156,7 +123,6 @@ abstract class BasePaginatedMenu(
     fun setMenuItems() {
         inventory.clear()
         paginatedItemMap.clear()
-
         placeFixedItems()
         if (footer) placeFooter()
         placePaginatedItems()
@@ -170,19 +136,19 @@ abstract class BasePaginatedMenu(
     private fun placePaginatedItems() {
         val start = page * getItemsPerPage()
         val end = minOf(start + getItemsPerPage(), items.size)
-
         var slotIndex = 0
+        val itemsPerRow = if (footer) 7 else 9
+
         for (i in start until end) {
-            val row = if (footer) (slotIndex / 7) + 1 else slotIndex / 9
+            val row = (slotIndex / itemsPerRow) + getStartRow()
             val col = if (footer) (slotIndex % 7) + 1 else slotIndex % 9
             val slot = row * 9 + col
 
             if (!isFixedItemSlot(slot) && inventory.getItem(slot) == null) {
                 val stack = items[i]
                 inventory.setItem(slot, stack)
-
-                val itemObject = itemToObjectMap[stack]
-                paginatedItemMap[slot] = itemObject ?: object : Item() {
+                val itemObj = itemToObjectMap[stack]
+                paginatedItemMap[slot] = itemObj ?: object : Item() {
                     override fun createItem(): ItemStack = stack
                     override fun onClickEvent(clicker: Player, clickType: ClickType) {}
                 }
@@ -200,7 +166,6 @@ abstract class BasePaginatedMenu(
             placeGlassPaneIfNotFixed(row * 9, grayPane)
             placeGlassPaneIfNotFixed(row * 9 + 8, grayPane)
         }
-
         for (i in 0 until 9) placeGlassPaneIfNotFixed(i, grayPane)
         for (i in bottomRowStart + 1 until bottomRowStart + 8) placeGlassPaneIfNotFixed(i, grayPane)
 
@@ -256,38 +221,30 @@ abstract class BasePaginatedMenu(
         })
     }
 
-    fun refreshMenu(player: Player? = null) {
-        if (::inventory.isInitialized) inventory.clear()
-        paginatedItemMap.clear()
-        itemToObjectMap.clear()
+    private fun applySearch() {
         items.clear()
+        itemToObjectMap.clear()
+        val query = searchQuery.lowercase().trim()
+        val filtered = if (query.isEmpty()) originalItems else originalItems.filter { item ->
+            val name = ChatColor.stripColor(item.createItem().itemMeta?.displayName ?: item.createItem().type.name)
+            name!!.lowercase().contains(query)
+        }
 
-        createItems()
-
-        setMenuItems()
-
-        if (player != null) {
-            player.updateInventory()
-        } else {
-            inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
+        filtered.forEach { item ->
+            val stack = item.createItem()
+            items.add(stack)
+            itemToObjectMap[stack] = item
         }
     }
 
-    private fun applySearch() {
-        items.clear()
-        if (searchQuery.isEmpty()) {
-            items.addAll(originalItems)
-            return
-        }
+    fun refreshMenu(player: Player? = null) {
+        if (!::inventory.isInitialized) return
+        inventory.clear()
+        paginatedItemMap.clear()
+        applySearch()
+        setMenuItems()
 
-        val query = searchQuery.lowercase()
-        originalItems.forEach { stack ->
-            val name = if (stack.hasItemMeta() && stack.itemMeta?.hasDisplayName() == true)
-                ChatColor.stripColor(stack.itemMeta!!.displayName!!)!!.lowercase()
-            else
-                stack.type.name.lowercase().replace("_", " ")
-            if (name.contains(query)) items.add(stack)
-        }
+        player?.updateInventory() ?: inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
     }
 
     @EventHandler
@@ -297,49 +254,26 @@ abstract class BasePaginatedMenu(
 
         val slot = event.rawSlot
         val topSize = event.view.topInventory.size
-
-        if (slot >= topSize && !useInventory()) {
-            event.isCancelled = true
-            return
-        }
+        if (slot >= topSize && !useInventory()) { event.isCancelled = true; return }
 
         val clickedItem = event.currentItem ?: return
         if (clickedItem.type == Material.AIR) return
+        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") { event.isCancelled = true; return }
 
-        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") {
-            event.isCancelled = true
-            return
-        }
-
-        val fixedItem = fixedItems[page]?.get(slot) ?: fixedItems[-1]?.get(slot)
-        if (fixedItem != null) {
-            fixedItem.onClickEvent(player, event.click)
-            val updated = fixedItem.createItem()
-            inventory.setItem(slot, updated)
-        }
-
+        fixedItems[page]?.get(slot)?.onClickEvent(player, event.click)
+            ?: fixedItems[-1]?.get(slot)?.onClickEvent(player, event.click)
 
         val bottomRowStart = (getRows() - 1) * 9
         if (slot == bottomRowStart) previousPage()
         if (slot == bottomRowStart + 8) nextPage()
 
-        paginatedItemMap[slot]?.let { item ->
-            item.onClickEvent(player, event.click)
-            val updated = item.createItem()
-            inventory.setItem(slot, updated)
-        }
-
-
+        paginatedItemMap[slot]?.onClickEvent(player, event.click)
         onInventoryClickEvent(player, event.click, event)
 
         event.isCancelled = cancelClicks()
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
-
-        if (autoRefreshOnClick) {
-            refreshMenu(player)
-        }
+        if (autoRefreshOnClick) refreshMenu(player)
     }
-
 
     override fun getInventory(): Inventory = inventory
 }
