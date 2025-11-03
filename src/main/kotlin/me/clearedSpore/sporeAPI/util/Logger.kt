@@ -17,6 +17,7 @@ object Logger {
 
     fun initialize(name: String) {
         pluginName = name
+        prefix = "\uD83D\uDEE0 $pluginName » ".blue()
     }
 
     fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
