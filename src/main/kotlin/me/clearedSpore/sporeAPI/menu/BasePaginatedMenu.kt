@@ -239,13 +239,19 @@ abstract class BasePaginatedMenu(
 
     fun refreshMenu(player: Player? = null) {
         if (!::inventory.isInitialized) return
+
         inventory.clear()
         paginatedItemMap.clear()
+        itemToObjectMap.clear()
+        items.clear()
+
+        createItems()
         applySearch()
         setMenuItems()
 
         player?.updateInventory() ?: inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
     }
+
 
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
