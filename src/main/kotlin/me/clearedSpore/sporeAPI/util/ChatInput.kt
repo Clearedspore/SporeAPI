@@ -24,6 +24,7 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
     }
 
     fun awaitChatInput(player: Player, callback: Consumer<String>) {
+        player.closeInventory()
         awaitingInput[player.uniqueId] = callback
         player.sendMessage("Please type your message in chat. Type 'cancel' to cancel.".blue())
     }
@@ -32,7 +33,7 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
         awaitingInput.remove(player.uniqueId)
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onPlayerChat(event: AsyncPlayerChatEvent) {
         val player = event.player
         val id = player.uniqueId
