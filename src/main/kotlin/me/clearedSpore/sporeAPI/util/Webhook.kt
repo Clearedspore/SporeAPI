@@ -79,7 +79,7 @@ class Webhook(private val webhookURL: String) {
 
             val responseCode = connection.responseCode
             if (responseCode != 204) {
-                println("Failed to send webhook. Response code: $responseCode")
+                Logger.error("Failed to send webhook. Response code: $responseCode")
             }
         } catch (e: Exception) {
             e.printStackTrace()
