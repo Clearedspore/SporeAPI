@@ -93,6 +93,7 @@ class Webhook(private val webhookURL: String) {
         private var description: String? = null
         private var color: Int? = null
         private var footer: String? = null
+        private val fields: MutableList<Field> = mutableListOf()
 
         fun setTitle(title: String): Embed {
             this.title = title
@@ -114,15 +115,35 @@ class Webhook(private val webhookURL: String) {
             return this
         }
 
+        fun addField(name: String, value: String, inline: Boolean = false): Embed {
+            fields.add(Field(name, value, inline))
+            return this
+        }
+
         fun toJson(): String {
             val builder = StringBuilder("{")
             title?.let { builder.append("\"title\":\"${it.replace("\"", "\\\"")}\",") }
             description?.let { builder.append("\"description\":\"${it.replace("\"", "\\\"")}\",") }
             color?.let { builder.append("\"color\":$it,") }
             footer?.let { builder.append("\"footer\":{\"text\":\"${it.replace("\"", "\\\"")}\"},") }
+
+            if (fields.isNotEmpty()) {
+                builder.append("\"fields\":[")
+                builder.append(fields.joinToString(",") { it.toJson() })
+                builder.append("],")
+            }
+
             if (builder.last() == ',') builder.setLength(builder.length - 1)
             builder.append("}")
             return builder.toString()
+        }
+
+        class Field(private val name: String, private val value: String, private val inline: Boolean) {
+            fun toJson(): String {
+                return "{\"name\":\"${name.replace("\"", "\\\"")}\"," +
+                        "\"value\":\"${value.replace("\"", "\\\"")}\"," +
+                        "\"inline\":$inline}"
+            }
         }
     }
 }
