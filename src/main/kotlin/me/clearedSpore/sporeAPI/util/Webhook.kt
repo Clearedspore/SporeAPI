@@ -93,6 +93,11 @@ class Webhook(private val webhookURL: String) {
         private var description: String? = null
         private var color: Int? = null
         private var footer: String? = null
+        private var footerIcon: String? = null
+        private var thumbnail: String? = null
+        private var image: String? = null
+        private var author: String? = null
+        private var authorIcon: String? = null
         private val fields: MutableList<Field> = mutableListOf()
 
         fun setTitle(title: String): Embed {
@@ -110,8 +115,25 @@ class Webhook(private val webhookURL: String) {
             return this
         }
 
-        fun setFooter(footer: String): Embed {
-            this.footer = footer
+        fun setFooter(text: String, iconUrl: String? = null): Embed {
+            this.footer = text
+            this.footerIcon = iconUrl
+            return this
+        }
+
+        fun setThumbnail(url: String): Embed {
+            this.thumbnail = url
+            return this
+        }
+
+        fun setImage(url: String): Embed {
+            this.image = url
+            return this
+        }
+
+        fun setAuthor(name: String, iconUrl: String? = null): Embed {
+            this.author = name
+            this.authorIcon = iconUrl
             return this
         }
 
@@ -125,7 +147,23 @@ class Webhook(private val webhookURL: String) {
             title?.let { builder.append("\"title\":\"${it.replace("\"", "\\\"")}\",") }
             description?.let { builder.append("\"description\":\"${it.replace("\"", "\\\"")}\",") }
             color?.let { builder.append("\"color\":$it,") }
-            footer?.let { builder.append("\"footer\":{\"text\":\"${it.replace("\"", "\\\"")}\"},") }
+
+            if (author != null) {
+                builder.append("\"author\":{")
+                builder.append("\"name\":\"${author!!.replace("\"", "\\\"")}\"")
+                if (authorIcon != null) builder.append(",\"icon_url\":\"${authorIcon!!.replace("\"", "\\\"")}\"")
+                builder.append("},")
+            }
+
+            thumbnail?.let { builder.append("\"thumbnail\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
+            image?.let { builder.append("\"image\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
+
+            if (footer != null) {
+                builder.append("\"footer\":{")
+                builder.append("\"text\":\"${footer!!.replace("\"", "\\\"")}\"")
+                if (footerIcon != null) builder.append(",\"icon_url\":\"${footerIcon!!.replace("\"", "\\\"")}\"")
+                builder.append("},")
+            }
 
             if (fields.isNotEmpty()) {
                 builder.append("\"fields\":[")
