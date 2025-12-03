@@ -91,13 +91,20 @@ class Webhook(private val webhookURL: String) {
 
     fun editMessage(messageId: String, newEmbed: Embed) {
         try {
-            val url = URL("$webhookURL/messages/$messageId")
+            val url = URL("$webhookURL/messages/$messageId?wait=true")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "PATCH"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
 
-            val payload = """{"embeds":[${newEmbed.toJson()}]}"""
+            val payload = buildString {
+                append("{")
+                append("\"embeds\":[")
+                append(newEmbed.toJson())
+                append("]")
+                append("}")
+            }
+
             connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
 
             val code = connection.responseCode
@@ -112,6 +119,7 @@ class Webhook(private val webhookURL: String) {
             e.printStackTrace()
         }
     }
+
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
 
