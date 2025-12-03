@@ -95,9 +95,12 @@ class Webhook(private val webhookURL: String) {
     fun editMessage(messageId: String, newEmbed: Embed) {
         val url = URL("$webhookURL/messages/$messageId")
         val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "PATCH"
-        connection.setRequestProperty("Content-Type", "application/json")
+
         connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json")
+
+        connection.requestMethod = "POST"
+        forcePatch(connection)
 
         val payload = """{"embeds":[${newEmbed.toJson()}]}"""
 
@@ -110,6 +113,16 @@ class Webhook(private val webhookURL: String) {
             Logger.error("Failed to edit webhook message: HTTP $response")
         }
     }
+
+    private fun forcePatch(connection: HttpURLConnection) {
+        try {
+            val methodField = connection.javaClass.getDeclaredField("method")
+            methodField.isAccessible = true
+            methodField.set(connection, "PATCH")
+        } catch (_: Exception) { }
+    }
+
+
 
 
 
