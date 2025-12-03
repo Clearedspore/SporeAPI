@@ -96,11 +96,10 @@ class Webhook(private val webhookURL: String) {
         val url = URL("$webhookURL/messages/$messageId")
         val connection = url.openConnection() as HttpURLConnection
 
-        connection.doOutput = true
-        connection.setRequestProperty("Content-Type", "application/json")
-
         connection.requestMethod = "POST"
-        forcePatch(connection)
+        connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.doOutput = true
 
         val payload = """{"embeds":[${newEmbed.toJson()}]}"""
 
@@ -108,12 +107,13 @@ class Webhook(private val webhookURL: String) {
             it.write(payload.toByteArray(StandardCharsets.UTF_8))
         }
 
-        val response = connection.responseCode
-        if (response !in 200..299) {
-            Logger.error("Failed to edit webhook message: HTTP $response")
+        val code = connection.responseCode
+        if (code !in 200..299) {
+            Logger.error("Failed to edit webhook message: HTTP $code")
         }
     }
 
+    
     private fun forcePatch(connection: HttpURLConnection) {
         try {
             val methodField = connection.javaClass.getDeclaredField("method")
