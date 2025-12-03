@@ -40,14 +40,15 @@ class Webhook(private val webhookURL: String) {
         return this
     }
 
-    fun send() {
+    fun send(): String? {
         if (webhookURL.isEmpty() || webhookURL == "webhook_url") {
             throw IllegalArgumentException("Invalid webhook URL: $webhookURL")
         }
 
         val payload = buildPayload()
-        sendPayload(payload)
+        return sendPayload(payload)
     }
+
 
     private fun buildPayload(): String {
         val jsonBuilder = StringBuilder("{")
@@ -65,26 +66,52 @@ class Webhook(private val webhookURL: String) {
         return jsonBuilder.toString()
     }
 
-    private fun sendPayload(payload: String) {
-        try {
-            val url = URL(webhookURL)
+    private fun sendPayload(payload: String): String? {
+        return try {
+            val url = URL("$webhookURL?wait=true")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
 
-            connection.outputStream.use { os ->
-                os.write(payload.toByteArray(StandardCharsets.UTF_8))
-            }
+            connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
 
             val responseCode = connection.responseCode
-            if (responseCode != 204) {
-                Logger.error("Failed to send webhook. Response code: $responseCode")
+
+            if (responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().readText()
+                val regex = """"id":"(\d+)"""".toRegex()
+                regex.find(response)?.groups?.get(1)?.value
+            } else {
+                Logger.error("Webhook failed: HTTP $responseCode")
+                null
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            null
         }
     }
+
+    fun editMessage(messageId: String, newEmbed: Embed) {
+        val url = URL("$webhookURL/messages/$messageId")
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "PATCH"
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.doOutput = true
+
+        val payload = """{"embeds":[${newEmbed.toJson()}]}"""
+
+        connection.outputStream.use {
+            it.write(payload.toByteArray(StandardCharsets.UTF_8))
+        }
+
+        val response = connection.responseCode
+        if (response !in 200..299) {
+            Logger.error("Failed to edit webhook message: HTTP $response")
+        }
+    }
+
+
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
 
