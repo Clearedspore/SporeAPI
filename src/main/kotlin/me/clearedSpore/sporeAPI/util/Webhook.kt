@@ -7,16 +7,15 @@ import java.nio.charset.StandardCharsets
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
-
 class Webhook(private val webhookURL: String) {
 
     private var content: String? = null
     private var username: String? = null
     private var avatarUrl: String? = null
-    private var embeds: MutableList<Embed> = mutableListOf()
+    private val embeds: MutableList<Embed> = mutableListOf()
 
     fun setMessage(message: String): Webhook {
-        this.content = message
+        content = message
         return this
     }
 
@@ -26,7 +25,7 @@ class Webhook(private val webhookURL: String) {
     }
 
     fun setProfileURL(url: String): Webhook {
-        this.avatarUrl = url
+        avatarUrl = url
         return this
     }
 
@@ -49,21 +48,18 @@ class Webhook(private val webhookURL: String) {
         return sendPayload(payload)
     }
 
-
     private fun buildPayload(): String {
-        val jsonBuilder = StringBuilder("{")
-        content?.let { jsonBuilder.append("\"content\":\"${escape(it)}\",") }
-        username?.let { jsonBuilder.append("\"username\":\"${escape(it)}\",") }
-        avatarUrl?.let { jsonBuilder.append("\"avatar_url\":\"${escape(it)}\",") }
-
+        val json = StringBuilder("{")
+        content?.let { json.append("\"content\":\"${escape(it)}\",") }
+        username?.let { json.append("\"username\":\"${escape(it)}\",") }
+        avatarUrl?.let { json.append("\"avatar_url\":\"${escape(it)}\",") }
         if (embeds.isNotEmpty()) {
             val embedJson = embeds.joinToString(",", "[", "]") { it.toJson() }
-            jsonBuilder.append("\"embeds\":$embedJson,")
+            json.append("\"embeds\":$embedJson,")
         }
-
-        if (jsonBuilder.last() == ',') jsonBuilder.setLength(jsonBuilder.length - 1)
-        jsonBuilder.append("}")
-        return jsonBuilder.toString()
+        if (json.last() == ',') json.setLength(json.length - 1)
+        json.append("}")
+        return json.toString()
     }
 
     private fun sendPayload(payload: String): String? {
@@ -73,17 +69,18 @@ class Webhook(private val webhookURL: String) {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
-
             connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
 
             val responseCode = connection.responseCode
+            val responseText = connection.inputStream.bufferedReader().readText()
 
-            if (responseCode == 200) {
-                val response = connection.inputStream.bufferedReader().readText()
+            if (responseCode in 200..299) {
                 val regex = """"id":"(\d+)"""".toRegex()
-                regex.find(response)?.groups?.get(1)?.value
+                val messageId = regex.find(responseText)?.groups?.get(1)?.value
+                Logger.info("Webhook sent successfully, messageId=$messageId")
+                messageId
             } else {
-                Logger.error("Webhook failed: HTTP $responseCode")
+                Logger.error("Webhook failed: HTTP $responseCode, response=$responseText")
                 null
             }
         } catch (e: Exception) {
@@ -93,38 +90,28 @@ class Webhook(private val webhookURL: String) {
     }
 
     fun editMessage(messageId: String, newEmbed: Embed) {
-        val url = URL("$webhookURL/messages/$messageId")
-        val connection = url.openConnection() as HttpURLConnection
-
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.doOutput = true
-
-        val payload = """{"embeds":[${newEmbed.toJson()}]}"""
-
-        connection.outputStream.use {
-            it.write(payload.toByteArray(StandardCharsets.UTF_8))
-        }
-
-        val code = connection.responseCode
-        if (code !in 200..299) {
-            Logger.error("Failed to edit webhook message: HTTP $code")
-        }
-    }
-
-    
-    private fun forcePatch(connection: HttpURLConnection) {
         try {
-            val methodField = connection.javaClass.getDeclaredField("method")
-            methodField.isAccessible = true
-            methodField.set(connection, "PATCH")
-        } catch (_: Exception) { }
+            val url = URL("$webhookURL/messages/$messageId")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "PATCH"
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+
+            val payload = """{"embeds":[${newEmbed.toJson()}]}"""
+            connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
+
+            val code = connection.responseCode
+            val responseText = connection.inputStream.bufferedReader().readText()
+
+            if (code !in 200..299) {
+                Logger.error("Failed to edit webhook message: HTTP $code, response=$responseText")
+            } else {
+                Logger.info("Webhook message $messageId edited successfully")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
-
-
-
-
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
 
@@ -140,46 +127,19 @@ class Webhook(private val webhookURL: String) {
         private var authorIcon: String? = null
         private val fields: MutableList<Field> = mutableListOf()
 
-        fun setTitle(title: String): Embed {
-            this.title = title
-            return this
+        fun setTitle(title: String) = apply { this.title = title }
+        fun setDescription(description: String) = apply { this.description = description }
+        fun setColor(color: Int) = apply { this.color = color }
+        fun setFooter(text: String, iconUrl: String? = null) = apply {
+            footer = text; footerIcon = iconUrl
         }
-
-        fun setDescription(description: String): Embed {
-            this.description = description
-            return this
+        fun setThumbnail(url: String) = apply { thumbnail = url }
+        fun setImage(url: String) = apply { image = url }
+        fun setAuthor(name: String, iconUrl: String? = null) = apply {
+            author = name; authorIcon = iconUrl
         }
-
-        fun setColor(color: Int): Embed {
-            this.color = color
-            return this
-        }
-
-        fun setFooter(text: String, iconUrl: String? = null): Embed {
-            this.footer = text
-            this.footerIcon = iconUrl
-            return this
-        }
-
-        fun setThumbnail(url: String): Embed {
-            this.thumbnail = url
-            return this
-        }
-
-        fun setImage(url: String): Embed {
-            this.image = url
-            return this
-        }
-
-        fun setAuthor(name: String, iconUrl: String? = null): Embed {
-            this.author = name
-            this.authorIcon = iconUrl
-            return this
-        }
-
-        fun addField(name: String, value: String, inline: Boolean = false): Embed {
+        fun addField(name: String, value: String, inline: Boolean = false) = apply {
             fields.add(Field(name, value, inline))
-            return this
         }
 
         fun toJson(): String {
@@ -187,30 +147,21 @@ class Webhook(private val webhookURL: String) {
             title?.let { builder.append("\"title\":\"${it.replace("\"", "\\\"")}\",") }
             description?.let { builder.append("\"description\":\"${it.replace("\"", "\\\"")}\",") }
             color?.let { builder.append("\"color\":$it,") }
-
             if (author != null) {
-                builder.append("\"author\":{")
-                builder.append("\"name\":\"${author!!.replace("\"", "\\\"")}\"")
-                if (authorIcon != null) builder.append(",\"icon_url\":\"${authorIcon!!.replace("\"", "\\\"")}\"")
+                builder.append("\"author\":{\"name\":\"${author!!.replace("\"", "\\\"")}\"")
+                authorIcon?.let { builder.append(",\"icon_url\":\"${it.replace("\"", "\\\"")}\"") }
                 builder.append("},")
             }
-
             thumbnail?.let { builder.append("\"thumbnail\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
             image?.let { builder.append("\"image\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
-
             if (footer != null) {
-                builder.append("\"footer\":{")
-                builder.append("\"text\":\"${footer!!.replace("\"", "\\\"")}\"")
-                if (footerIcon != null) builder.append(",\"icon_url\":\"${footerIcon!!.replace("\"", "\\\"")}\"")
+                builder.append("\"footer\":{\"text\":\"${footer!!.replace("\"", "\\\"")}\"")
+                footerIcon?.let { builder.append(",\"icon_url\":\"${it.replace("\"", "\\\"")}\"") }
                 builder.append("},")
             }
-
             if (fields.isNotEmpty()) {
-                builder.append("\"fields\":[")
-                builder.append(fields.joinToString(",") { it.toJson() })
-                builder.append("],")
+                builder.append("\"fields\":[${fields.joinToString(",") { it.toJson() }}],")
             }
-
             if (builder.last() == ',') builder.setLength(builder.length - 1)
             builder.append("}")
             return builder.toString()
@@ -218,9 +169,7 @@ class Webhook(private val webhookURL: String) {
 
         class Field(private val name: String, private val value: String, private val inline: Boolean) {
             fun toJson(): String {
-                return "{\"name\":\"${name.replace("\"", "\\\"")}\"," +
-                        "\"value\":\"${value.replace("\"", "\\\"")}\"," +
-                        "\"inline\":$inline}"
+                return """{"name":"${name.replace("\"","\\\"")}","value":"${value.replace("\"","\\\"")}","inline":$inline}"""
             }
         }
     }
