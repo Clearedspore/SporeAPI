@@ -94,11 +94,12 @@ class Webhook(private val webhookURL: String) {
             val url = URL("$webhookURL/messages/$messageId?wait=true")
             val connection = url.openConnection() as HttpURLConnection
 
-            connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
-            connection.requestMethod = "POST"
+            val methodField = HttpURLConnection::class.java.getDeclaredField("method")
+            methodField.isAccessible = true
+            methodField.set(connection, "PATCH")
+
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
-
 
             val payload = buildString {
                 append("{")
@@ -110,7 +111,6 @@ class Webhook(private val webhookURL: String) {
             connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
 
             val code = connection.responseCode
-
             val responseText = if (code in 200..299) {
                 connection.inputStream.bufferedReader().readText()
             } else {
@@ -127,7 +127,6 @@ class Webhook(private val webhookURL: String) {
             e.printStackTrace()
         }
     }
-
 
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
