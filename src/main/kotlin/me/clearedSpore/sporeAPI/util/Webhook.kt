@@ -101,24 +101,30 @@ class Webhook(private val webhookURL: String) {
                 append("{")
                 append("\"embeds\":[")
                 append(newEmbed.toJson())
-                append("]")
-                append("}")
+                append("]}")
             }
 
             connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
 
             val code = connection.responseCode
-            val responseText = connection.inputStream.bufferedReader().readText()
+
+            val responseText = if (code in 200..299) {
+                connection.inputStream.bufferedReader().readText()
+            } else {
+                connection.errorStream?.bufferedReader()?.readText() ?: "No response body"
+            }
 
             if (code !in 200..299) {
                 Logger.error("Failed to edit webhook message: HTTP $code, response=$responseText")
             } else {
                 Logger.info("Webhook message $messageId edited successfully")
             }
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
 
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
