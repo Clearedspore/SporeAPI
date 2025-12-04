@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.util
 
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
@@ -91,15 +92,7 @@ class Webhook(private val webhookURL: String) {
 
     fun editMessage(messageId: String, newEmbed: Embed) {
         try {
-            val url = URL("$webhookURL/messages/$messageId?wait=true")
-            val connection = url.openConnection() as HttpURLConnection
-
-            val methodField = HttpURLConnection::class.java.getDeclaredField("method")
-            methodField.isAccessible = true
-            methodField.set(connection, "PATCH")
-
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.doOutput = true
+            val client = java.net.http.HttpClient.newHttpClient()
 
             val payload = buildString {
                 append("{")
@@ -108,17 +101,17 @@ class Webhook(private val webhookURL: String) {
                 append("]}")
             }
 
-            connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
+            val request = java.net.http.HttpRequest.newBuilder()
+                .uri(URI.create("$webhookURL/messages/$messageId"))
+                .header("Content-Type", "application/json")
+                .method("PATCH", java.net.http.HttpRequest.BodyPublishers.ofString(payload))
+                .build()
 
-            val code = connection.responseCode
-            val responseText = if (code in 200..299) {
-                connection.inputStream.bufferedReader().readText()
-            } else {
-                connection.errorStream?.bufferedReader()?.readText() ?: "No response body"
-            }
+            val response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+            val code = response.statusCode()
 
             if (code !in 200..299) {
-                Logger.error("Failed to edit webhook message: HTTP $code, response=$responseText")
+                Logger.error("Failed to edit webhook message: HTTP $code, response=${response.body()} (SNAPSHOT)")
             } else {
                 Logger.info("Webhook message $messageId edited successfully")
             }
@@ -127,6 +120,7 @@ class Webhook(private val webhookURL: String) {
             e.printStackTrace()
         }
     }
+
 
 
     private fun escape(text: String) = text.replace("\"", "\\\"")
