@@ -93,9 +93,12 @@ class Webhook(private val webhookURL: String) {
         try {
             val url = URL("$webhookURL/messages/$messageId?wait=true")
             val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "PATCH"
+
+            connection.setRequestProperty("X-HTTP-Method-Override", "PATCH")
+            connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
+
 
             val payload = buildString {
                 append("{")
