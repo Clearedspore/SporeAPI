@@ -12,6 +12,7 @@ abstract class Item {
     abstract fun createItem(): ItemStack
     abstract fun onClickEvent(clicker: Player, clickType: ClickType)
 
+    open fun spamCooldown(): Boolean = true
     open fun cancelClick(): Boolean = true
 
     fun refresh(): ItemStack = createItem()

@@ -35,6 +35,11 @@ abstract class BasePaginatedMenu(
     protected var autoRefreshOnClick: Boolean = true
     private val itemToObjectMap = WeakHashMap<ItemStack, Item>()
 
+    private val SPAM_MAX_CLICKS = 3
+    private val SPAM_TIME_WINDOW_MS = 2000L
+
+    private val itemClickTimestamps = mutableMapOf<Item, MutableMap<UUID, MutableList<Long>>>()
+
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
@@ -293,14 +298,30 @@ abstract class BasePaginatedMenu(
         if (clickedItem.type == Material.AIR) return
         if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") { event.isCancelled = true; return }
 
-        fixedItems[page]?.get(slot)?.onClickEvent(player, event.click)
-            ?: fixedItems[-1]?.get(slot)?.onClickEvent(player, event.click)
+        val menuItem = fixedItems[page]?.get(slot)
+            ?: fixedItems[-1]?.get(slot)
+            ?: paginatedItemMap[slot]
 
-        val bottomRowStart = (getRows() - 1) * 9
-        if (slot == bottomRowStart) previousPage()
-        if (slot == bottomRowStart + 8) nextPage()
+        menuItem?.let { item ->
+            if (item.spamCooldown()) {
+                val playerClicks = itemClickTimestamps
+                    .computeIfAbsent(item) { mutableMapOf() }
+                    .computeIfAbsent(player.uniqueId) { mutableListOf() }
 
-        paginatedItemMap[slot]?.onClickEvent(player, event.click)
+                val now = System.currentTimeMillis()
+                playerClicks.removeIf { it < now - SPAM_TIME_WINDOW_MS }
+                playerClicks.add(now)
+
+                if (playerClicks.size > SPAM_MAX_CLICKS) {
+                    player.sendMessage("§cYou're clicking too fast! Please wait a moment.")
+                    event.isCancelled = true
+                    return
+                }
+            }
+
+            item.onClickEvent(player, event.click)
+        }
+
         onInventoryClickEvent(player, event.click, event)
 
         event.isCancelled = cancelClicks()

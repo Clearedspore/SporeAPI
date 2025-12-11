@@ -15,6 +15,7 @@ import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
+import java.util.UUID
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -28,6 +29,11 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     protected var autoRefreshOnClick: Boolean = true
     private var autoRefreshTask: BukkitRunnable? = null
     private var autoRefreshEnabled = true
+
+    private val SPAM_MAX_CLICKS = 3
+    private val SPAM_TIME_WINDOW_MS = 2000L
+
+    private val itemClickTimestamps = mutableMapOf<Item, MutableMap<UUID, MutableList<Long>>>()
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -102,19 +108,33 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
 
         val item = itemMap[slot]
         if (item != null) {
+
+            // Spam-cooldown check
+            if (item.spamCooldown()) {
+                val playerClicks = itemClickTimestamps
+                    .computeIfAbsent(item) { mutableMapOf() }
+                    .computeIfAbsent(player.uniqueId) { mutableListOf() }
+
+                val now = System.currentTimeMillis()
+                playerClicks.removeIf { it < now - SPAM_TIME_WINDOW_MS }
+                playerClicks.add(now)
+
+                if (playerClicks.size > SPAM_MAX_CLICKS) {
+                    player.sendMessage("§cYou're clicking too fast! Please wait a moment.")
+                    event.isCancelled = true
+                    return
+                }
+            }
+
             event.isCancelled = item.cancelClick()
 
             try {
                 item.onClickEvent(player, event.click)
-
                 val updated = item.createItem()
                 inventory.setItem(slot, updated)
-
                 player.playSound(player.location, clickSound(), 0.5f, 1.0f)
 
-                if (autoRefreshOnClick) {
-                    refreshMenu(player)
-                }
+                if (autoRefreshOnClick) refreshMenu(player)
 
             } catch (e: Exception) {
                 player.sendMessage("§cAn error occurred while handling your click.")
