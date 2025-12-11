@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.util.CC.blue
+import me.clearedSpore.sporeAPI.util.CC.gray
 import me.clearedSpore.sporeAPI.util.CC.white
 import me.clearedSpore.sporeAPI.util.ChatInput
 import org.bukkit.Bukkit
@@ -29,7 +30,7 @@ abstract class BasePaginatedMenu(
     protected val items = mutableListOf<ItemStack>()
     protected val fixedItems = mutableMapOf<Int, MutableMap<Int, Item>>()
     protected val paginatedItemMap = mutableMapOf<Int, Item>()
-    protected var page = 0
+    protected var page = 1
     protected var searchQuery: String = ""
     protected var autoRefreshOnClick: Boolean = true
     private val itemToObjectMap = WeakHashMap<ItemStack, Item>()
@@ -125,24 +126,37 @@ abstract class BasePaginatedMenu(
         paginatedItemMap.clear()
         placeFixedItems()
         if (footer) placeFooter()
+        placeNavigationItems()
         placePaginatedItems()
     }
+
 
     private fun placeFixedItems() {
         fixedItems[-1]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
         fixedItems[page]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
     }
 
+    private fun getNavigationRow(): Int {
+        return if (footer) getRows() - 1 else 0
+    }
+
+
     private fun placePaginatedItems() {
-        val start = page * getItemsPerPage()
+        val start = (page - 1) * getItemsPerPage()
         val end = minOf(start + getItemsPerPage(), items.size)
         var slotIndex = 0
         val itemsPerRow = if (footer) 7 else 9
+        val navRow = getNavigationRow()
 
         for (i in start until end) {
             val row = (slotIndex / itemsPerRow) + getStartRow()
             val col = if (footer) (slotIndex % 7) + 1 else slotIndex % 9
             val slot = row * 9 + col
+
+            if (slot / 9 == navRow) {
+                slotIndex++
+                continue
+            }
 
             if (!isFixedItemSlot(slot) && inventory.getItem(slot) == null) {
                 val stack = items[i]
@@ -156,6 +170,16 @@ abstract class BasePaginatedMenu(
             slotIndex++
         }
     }
+
+    private fun placeNavigationItems() {
+        val navRow = getNavigationRow()
+        val firstSlot = navRow * 9
+        val lastSlot = navRow * 9 + 8
+
+        if (!isFixedItemSlot(firstSlot)) inventory.setItem(firstSlot, createPreviousPageItem())
+        if (!isFixedItemSlot(lastSlot)) inventory.setItem(lastSlot, createNextPageItem())
+    }
+
 
     private fun placeFooter() {
         if (getRows() < 3) return
@@ -183,7 +207,7 @@ abstract class BasePaginatedMenu(
     fun createPreviousPageItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
         itemMeta = itemMeta?.apply {
             setDisplayName("Previous page".blue())
-            lore = mutableListOf("Click to go to the previous page".white(), "Current page: $page".white())
+            lore = mutableListOf("Click to go to the previous page".gray(), "Current page: $page".gray())
         }
         if (page >= 1) amount = page
     }
@@ -191,7 +215,7 @@ abstract class BasePaginatedMenu(
     fun createNextPageItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
         itemMeta = itemMeta?.apply {
             setDisplayName("Next page".blue())
-            lore = mutableListOf("Click to go to the next page".white(), "Current page: $page".white())
+            lore = mutableListOf("Click to go to the next page".gray(), "Current page: $page".gray())
         }
         if (page >= 1) amount = page
     }
