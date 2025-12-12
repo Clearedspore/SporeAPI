@@ -38,7 +38,7 @@ abstract class BasePaginatedMenu(
     private val SPAM_MAX_CLICKS = 3
     private val SPAM_TIME_WINDOW_MS = 2000L
 
-    private val itemClickTimestamps = mutableMapOf<Item, MutableMap<UUID, MutableList<Long>>>()
+    private val slotClickTimestamps: MutableMap<Int, MutableMap<UUID, MutableList<Long>>> = mutableMapOf()
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -304,9 +304,9 @@ abstract class BasePaginatedMenu(
 
         menuItem?.let { item ->
             if (item.spamCooldown()) {
-                val playerClicks = itemClickTimestamps
-                    .computeIfAbsent(item) { mutableMapOf() }
-                    .computeIfAbsent(player.uniqueId) { mutableListOf() }
+                val playerClicks: MutableList<Long> = slotClickTimestamps
+                    .computeIfAbsent(slot) { mutableMapOf() }
+                    .computeIfAbsent(player.uniqueId) { mutableListOf<Long>() }
 
                 val now = System.currentTimeMillis()
                 playerClicks.removeIf { it < now - SPAM_TIME_WINDOW_MS }
@@ -328,6 +328,7 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
         if (autoRefreshOnClick) refreshMenu(player)
     }
+
 
     override fun getInventory(): Inventory = inventory
 }
