@@ -274,14 +274,13 @@ abstract class BasePaginatedMenu(
         paginatedItemMap.clear()
         itemToObjectMap.clear()
         items.clear()
-        originalItems.clear()
 
-        createItems()
         applySearch()
         setMenuItems()
 
         player?.updateInventory() ?: inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
     }
+
 
 
 
