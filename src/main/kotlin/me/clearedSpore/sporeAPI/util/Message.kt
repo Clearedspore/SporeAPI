@@ -57,22 +57,27 @@ object Message {
 
     fun broadcastActionBar(message: String) = Bukkit.getOnlinePlayers().forEach { it.sendActionBar(message) }
 
-    fun Player.sendSuccessMessage(message: String) {
+    fun CommandSender.sendSuccessMessage(message: String) {
         if(usePrefix) {
             this.sendMessage("$prefix » ✔ | $message".blue())
         } else {
             this.sendMessage("✔ | $message".blue())
         }
-        this.playSound(this.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
+
+        if(this is Player) {
+            this.playSound(this, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
+        }
     }
 
-    fun Player.sendErrorMessage(message: String) {
+    fun CommandSender.sendErrorMessage(message: String) {
         if(usePrefix) {
             this.sendMessage("$prefix » ✖ | $message".red())
         } else {
             this.sendMessage("✖ | $message".red())
         }
-        this.playSound(this.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
+        if(this is Player) {
+            this.playSound(this, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
+        }
     }
 
     private fun createBossBar(title: String, progress: Float): BossBar =
