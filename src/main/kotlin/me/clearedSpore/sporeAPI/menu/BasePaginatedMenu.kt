@@ -2,6 +2,7 @@ package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.gray
+import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.CC.white
 import me.clearedSpore.sporeAPI.util.ChatInput
 import org.bukkit.Bukkit
@@ -313,7 +314,7 @@ abstract class BasePaginatedMenu(
                 playerClicks.add(now)
 
                 if (playerClicks.size > SPAM_MAX_CLICKS) {
-                    player.sendMessage("§cYou're clicking too fast! Please wait a moment.")
+                    player.sendMessage("You're clicking too fast! Please wait a moment.".red())
                     event.isCancelled = true
                     return
                 }

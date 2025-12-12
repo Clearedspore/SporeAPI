@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.menu
 
+import me.clearedSpore.sporeAPI.util.CC.red
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -119,7 +120,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
                 playerClicks.add(now)
 
                 if (playerClicks.size > SPAM_MAX_CLICKS) {
-                    player.sendMessage("§cYou're clicking too fast! Please wait a moment.")
+                    player.sendMessage("You're clicking too fast! Please wait a moment.".red())
                     event.isCancelled = true
                     return
                 }
@@ -136,7 +137,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
                 if (autoRefreshOnClick) refreshMenu(player)
 
             } catch (e: Exception) {
-                player.sendMessage("§cAn error occurred while handling your click.")
+                player.sendMessage("An error occurred while handling your click.".red())
                 e.printStackTrace()
             }
 
