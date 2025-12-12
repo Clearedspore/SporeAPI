@@ -241,7 +241,7 @@ abstract class BasePaginatedMenu(
                 clicker.closeInventory()
                 chatInput.awaitChatInput(clicker) { input ->
                     searchQuery = input?.trim()?.lowercase() ?: ""
-                    page = 0
+                    page = 1
                     applySearch()
                     setMenuItems()
                     open(clicker)
