@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
@@ -88,6 +89,16 @@ abstract class BasePaginatedMenu(
         items.add(stack)
         itemToObjectMap[stack] = item
     }
+
+    @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        if (event.inventory.holder == this && event.player is Player) {
+            onClose(event.player as Player)
+            stopAutoRefresh()
+        }
+    }
+
+    open fun onClose(player: Player) {}
 
     fun startAutoRefresh() {
         stopAutoRefresh()
