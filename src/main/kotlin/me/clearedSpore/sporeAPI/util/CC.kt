@@ -21,6 +21,8 @@ object CC {
     fun String.translate(): String {
         var message = this
 
+        message = message.replace("&cb", "&#1D91FF")
+
         val matcher = HEX_PATTERN.matcher(message)
         while (matcher.find()) {
             val hexCode = matcher.group().substring(1)
@@ -36,6 +38,7 @@ object CC {
             message
         }
     }
+
 
     fun String.white() = "&#E2E2E2$this".translate()
     fun String.blue() = "&#1D91FF$this".translate()
