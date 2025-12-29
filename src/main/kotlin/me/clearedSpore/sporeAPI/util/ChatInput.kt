@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.util
 
+import io.papermc.paper.event.player.AsyncChatEvent
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.red
 import org.bukkit.entity.Player
@@ -7,6 +8,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.AsyncPlayerChatEvent
+import org.bukkit.event.player.PlayerChatEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
@@ -33,7 +35,7 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
         awaitingInput.remove(player.uniqueId)
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.MONITOR)
     fun onPlayerChat(event: AsyncPlayerChatEvent) {
         val player = event.player
         val id = player.uniqueId
@@ -48,7 +50,6 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
             plugin.server.scheduler.runTask(plugin, Runnable {
                 awaitingInput.remove(id)?.accept(message)
             })
-
         }
     }
 
