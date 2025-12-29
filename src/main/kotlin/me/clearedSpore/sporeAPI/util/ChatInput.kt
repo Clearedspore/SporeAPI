@@ -2,6 +2,7 @@ package me.clearedSpore.sporeAPI.util
 
 import io.papermc.paper.event.player.AsyncChatEvent
 import me.clearedSpore.sporeAPI.util.CC.blue
+import me.clearedSpore.sporeAPI.util.CC.red
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -37,14 +38,21 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
         val callback = awaitingInput[player.uniqueId] ?: return
 
         event.isCancelled = true
+        event.viewers().clear()
+
         val msg = plainSerializer.serialize(event.message())
+
+        if (msg.equals("cancel", true)) {
+            player.sendMessage("Cancelled procedure.".red())
+            awaitingInput.remove(player.uniqueId)
+            return
+        }
 
         Task.run(Runnable {
             awaitingInput.remove(player.uniqueId)?.accept(msg)
         })
-
-
     }
+
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
