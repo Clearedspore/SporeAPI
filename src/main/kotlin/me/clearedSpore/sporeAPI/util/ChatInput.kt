@@ -35,23 +35,18 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
         awaitingInput.remove(player.uniqueId)
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
-    fun onPlayerChat(event: AsyncPlayerChatEvent) {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onChat(event: AsyncPlayerChatEvent) {
         val player = event.player
-        val id = player.uniqueId
-        if (awaitingInput.containsKey(id)) {
+        if (awaitingInput.containsKey(player.uniqueId)) {
             event.isCancelled = true
-            val message = event.message
-            if (message.equals("cancel", ignoreCase = true)) {
-                player.sendMessage("Input cancelled.".red())
-                awaitingInput.remove(id)
-                return
-            }
+            val msg = event.message
             plugin.server.scheduler.runTask(plugin, Runnable {
-                awaitingInput.remove(id)?.accept(message)
+                awaitingInput.remove(player.uniqueId)?.accept(msg)
             })
         }
     }
+
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
