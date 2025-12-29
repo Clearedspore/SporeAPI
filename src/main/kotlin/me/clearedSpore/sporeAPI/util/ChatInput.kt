@@ -2,24 +2,20 @@ package me.clearedSpore.sporeAPI.util
 
 import io.papermc.paper.event.player.AsyncChatEvent
 import me.clearedSpore.sporeAPI.util.CC.blue
-import me.clearedSpore.sporeAPI.util.CC.red
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
-import org.bukkit.event.player.AsyncPlayerChatEvent
-import org.bukkit.event.player.PlayerChatEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.*
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import java.util.UUID
 import java.util.function.Consumer
-
-// Copyright (c) 2025 ClearedSpore
-// Licensed under the MIT License. See LICENSE file in the project root for details.
 
 class ChatInput(private val plugin: JavaPlugin) : Listener {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()
+    private val plainSerializer = PlainTextComponentSerializer.plainText()
 
     init {
         plugin.server.pluginManager.registerEvents(this, plugin)
@@ -35,18 +31,20 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
         awaitingInput.remove(player.uniqueId)
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    fun onChat(event: AsyncPlayerChatEvent) {
+    @EventHandler(priority = EventPriority.HIGHEST)
+    fun onChat(event: AsyncChatEvent) {
         val player = event.player
-        if (awaitingInput.containsKey(player.uniqueId)) {
-            event.isCancelled = true
-            val msg = event.message
-            plugin.server.scheduler.runTask(plugin, Runnable {
-                awaitingInput.remove(player.uniqueId)?.accept(msg)
-            })
-        }
-    }
+        val callback = awaitingInput[player.uniqueId] ?: return
 
+        event.isCancelled = true
+        val msg = plainSerializer.serialize(event.message())
+
+        Task.run(Runnable {
+            awaitingInput.remove(player.uniqueId)?.accept(msg)
+        })
+
+
+    }
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {

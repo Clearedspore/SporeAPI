@@ -2,40 +2,61 @@ package me.clearedSpore.sporeAPI.util
 
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scheduler.BukkitTask
 import java.util.concurrent.*
-import java.util.function.Supplier
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
 object Task {
 
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-    private var plugin: JavaPlugin? = null
-    private val repeatingTasks = ConcurrentHashMap<Any, ScheduledFuture<*>>()
-
-    fun initialize(pluginInstance: JavaPlugin) { plugin = pluginInstance }
-
-    fun runAsync(task: Runnable): CompletableFuture<Void> = CompletableFuture.runAsync(task)
-    fun <T> supplyAsync(task: Supplier<T>): CompletableFuture<T> = CompletableFuture.supplyAsync(task)
-
-    fun runOnNextTick(task: Runnable) = scheduler.schedule(task, 50, TimeUnit.MILLISECONDS)
-    fun runDelayed(task: Runnable, delay: Long, unit: TimeUnit) = scheduler.schedule(task, delay, unit)
-    fun runRepeated(task: Runnable, initialDelay: Long, period: Long, unit: TimeUnit) =
-        scheduler.scheduleAtFixedRate(task, initialDelay, period, unit)
-
-    fun runRepeated(key: Any, task: Runnable, initialDelay: Long, period: Long, unit: TimeUnit) {
-        cancel(key)
-        repeatingTasks[key] = scheduler.scheduleAtFixedRate(task, initialDelay, period, unit)
+    lateinit var instance: JavaPlugin
+    
+    fun onInitialize(plugin: JavaPlugin){
+        instance = plugin
     }
 
-    fun cancel(key: Any) { repeatingTasks.remove(key)?.cancel(false) }
+    fun run(runnable: Runnable): BukkitTask =
+        Bukkit.getScheduler().runTask(instance, runnable)
 
-    fun runWithFixedDelay(task: Runnable, initialDelay: Long, delay: Long, unit: TimeUnit) =
-        scheduler.scheduleWithFixedDelay(task, initialDelay, delay, unit)
+    fun runSync(runnable: Runnable): BukkitTask =
+        Bukkit.getScheduler().runTask(instance, runnable)
 
-    fun runTask(task: Runnable) = plugin?.let { Bukkit.getScheduler().runTask(it, task) }
-        ?: throw IllegalStateException("Task class not initialized with a plugin instance.")
+    fun runAsync(runnable: Runnable): BukkitTask =
+        Bukkit.getScheduler().runTaskAsynchronously(instance, runnable)
 
-    fun shutdown() = scheduler.shutdown()
+    fun runLater(runnable: Runnable, delay: Long, unit: TimeUnit = TimeUnit.SECONDS): BukkitTask =
+        Bukkit.getScheduler().runTaskLater(
+            instance,
+            runnable,
+            unit.toSeconds(delay) * 20L
+        )
+
+    fun runLaterAsync(runnable: Runnable, delay: Long, unit: TimeUnit = TimeUnit.SECONDS): BukkitTask =
+        Bukkit.getScheduler().runTaskLaterAsynchronously(
+            instance,
+            runnable,
+            unit.toSeconds(delay) * 20L
+        )
+
+    fun runRepeated(runnable: Runnable, delay: Long, interval: Long, unit: TimeUnit = TimeUnit.SECONDS): BukkitTask =
+        Bukkit.getScheduler().runTaskTimer(
+            instance,
+            runnable,
+            unit.toSeconds(delay) * 20L,
+            unit.toSeconds(interval) * 20L
+        )
+
+    fun runRepeatedAsync(
+        runnable: Runnable,
+        delay: Long,
+        interval: Long,
+        unit: TimeUnit = TimeUnit.SECONDS
+    ): BukkitTask =
+        Bukkit.getScheduler().runTaskTimerAsynchronously(
+            instance,
+            runnable,
+            unit.toSeconds(delay) * 20L,
+            unit.toSeconds(interval) * 20L
+        )
 }
