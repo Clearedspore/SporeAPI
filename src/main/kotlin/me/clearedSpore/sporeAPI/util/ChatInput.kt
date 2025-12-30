@@ -13,14 +13,10 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import java.util.UUID
 import java.util.function.Consumer
 
-class ChatInput(private val plugin: JavaPlugin) : Listener {
+class ChatInput : Listener {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()
     private val plainSerializer = PlainTextComponentSerializer.plainText()
-
-    init {
-        plugin.server.pluginManager.registerEvents(this, plugin)
-    }
 
     fun awaitChatInput(player: Player, callback: Consumer<String>) {
         player.closeInventory()
@@ -52,7 +48,6 @@ class ChatInput(private val plugin: JavaPlugin) : Listener {
             awaitingInput.remove(player.uniqueId)?.accept(msg)
         })
     }
-
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
