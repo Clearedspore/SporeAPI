@@ -2,7 +2,6 @@ package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.white
-import me.clearedSpore.sporeAPI.util.ChatInput
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -158,39 +157,6 @@ abstract class PaginatedMenu(protected val plugin: JavaPlugin) : InventoryHolder
     }
 
     fun setGlobalMenuItem(x: Int, y: Int, item: Item) = setMenuItem(x, y, -1, item)
-
-    fun addSearchItem(x: Int, y: Int, chatInput: ChatInput) {
-        setGlobalMenuItem(x, y, object : Item() {
-            override fun createItem(): ItemStack {
-                val item = ItemStack(Material.OAK_SIGN)
-                val meta = item.itemMeta
-                meta?.let {
-                    it.setDisplayName("Search".blue())
-                    val lore = mutableListOf("Click to search items".white())
-                    if (searchQuery.isNotEmpty()) lore.add("Current: $searchQuery".white())
-                    it.lore = lore
-                    item.itemMeta = it
-                }
-                return item
-            }
-
-            override fun onClickEvent(clicker: Player, clickType: ClickType) {
-                clicker.closeInventory()
-                chatInput.awaitChatInput(clicker) { input ->
-                    searchQuery = input?.trim()?.lowercase() ?: ""
-                    if (searchQuery.isEmpty()) {
-                        items.clear()
-                        items.addAll(originalItems)
-                    } else {
-                        applySearch()
-                    }
-                    page = 0
-                    setMenuItems()
-                    clicker.openInventory(inventory!!)
-                }
-            }
-        })
-    }
 
     private fun applySearch() {
         items.clear()

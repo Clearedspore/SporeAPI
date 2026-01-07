@@ -4,7 +4,7 @@ import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.gray
 import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.CC.white
-import me.clearedSpore.sporeAPI.util.ChatInput
+import me.clearedSpore.sporeAPI.util.ChatInputService
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -237,7 +237,7 @@ abstract class BasePaginatedMenu(
         if (page >= 1) amount = page
     }
 
-    fun addSearchItem(x: Int, y: Int, chatInput: ChatInput) {
+    fun addSearchItem(x: Int, y: Int) {
         setGlobalMenuItem(x, y, object : Item() {
             override fun createItem(): ItemStack = ItemStack(Material.OAK_SIGN).apply {
                 itemMeta = itemMeta?.apply {
@@ -250,8 +250,8 @@ abstract class BasePaginatedMenu(
 
             override fun onClickEvent(clicker: Player, clickType: ClickType) {
                 clicker.closeInventory()
-                chatInput.awaitChatInput(clicker) { input ->
-                    searchQuery = input?.trim()?.lowercase() ?: ""
+                ChatInputService.begin(clicker) { input ->
+                    searchQuery = input.trim().lowercase()
                     page = 1
                     applySearch()
                     setMenuItems()
