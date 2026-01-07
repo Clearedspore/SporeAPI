@@ -27,6 +27,15 @@ object Cooldown {
     fun isOnCooldown(id: String, playerId: UUID): Boolean =
         getTimeLeft(id, playerId) > 0
 
+
+    fun updateCooldownDuration(id: String, newDurationSeconds: Long) {
+        if (!cooldownDurations.containsKey(id)) {
+            throw IllegalArgumentException("Cooldown ID not found: $id")
+        }
+        cooldownDurations[id] = newDurationSeconds * 1000
+    }
+
+
     fun getTimeLeft(id: String, playerId: UUID): Long =
         activeCooldowns[id]?.get(playerId)?.let {
             (it - System.currentTimeMillis()).coerceAtLeast(0)
