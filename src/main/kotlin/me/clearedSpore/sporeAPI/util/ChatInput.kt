@@ -44,9 +44,9 @@ class ChatInput : Listener {
             return
         }
 
-        Task.run(
+        Task.run(Runnable {
             awaitingInput.remove(player.uniqueId)?.accept(msg)
-        )
+        })
     }
 
     @EventHandler
