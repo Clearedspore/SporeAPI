@@ -34,6 +34,8 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     private val SPAM_MAX_CLICKS = 3
     private val SPAM_TIME_WINDOW_MS = 2000L
 
+    var shouldReopen = false
+
     private val slotClickTimestamps: MutableMap<Int, MutableMap<UUID, MutableList<Long>>> = mutableMapOf()
 
     init {
@@ -129,6 +131,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
             event.isCancelled = item.cancelClick()
 
             try {
+                shouldReopen = false
                 item.onClickEvent(player, event.click)
                 val updated = item.createItem()
                 inventory.setItem(slot, updated)
@@ -154,6 +157,9 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
         if (event.inventory.holder == this && event.player is Player) {
+            if(shouldReopen){
+                this.open(event.player as Player)
+            }
             onClose(event.player as Player)
             stopAutoRefresh()
         }

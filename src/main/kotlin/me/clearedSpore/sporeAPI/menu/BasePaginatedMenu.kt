@@ -37,6 +37,8 @@ abstract class BasePaginatedMenu(
     protected var autoRefreshOnClick: Boolean = true
     private val itemToObjectMap = WeakHashMap<ItemStack, Item>()
 
+    var shouldReopen = false
+
     private val SPAM_MAX_CLICKS = 3
     private val SPAM_TIME_WINDOW_MS = 2000L
 
@@ -93,6 +95,9 @@ abstract class BasePaginatedMenu(
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
         if (event.inventory.holder == this && event.player is Player) {
+            if (shouldReopen) {
+                this.open(event.player as Player)
+            }
             onClose(event.player as Player)
             stopAutoRefresh()
         }
@@ -201,7 +206,8 @@ abstract class BasePaginatedMenu(
     private fun placeFooter() {
         if (getRows() < 3) return
         val bottomRowStart = (getRows() - 1) * 9
-        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply { itemMeta = itemMeta?.apply { setDisplayName(" ") } }
+        val grayPane =
+            ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply { itemMeta = itemMeta?.apply { setDisplayName(" ") } }
 
         for (row in 1 until getRows() - 1) {
             placeGlassPaneIfNotFixed(row * 9, grayPane)
@@ -293,9 +299,6 @@ abstract class BasePaginatedMenu(
     }
 
 
-
-
-
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
@@ -303,11 +306,15 @@ abstract class BasePaginatedMenu(
 
         val slot = event.rawSlot
         val topSize = event.view.topInventory.size
-        if (slot >= topSize && !useInventory()) { event.isCancelled = true; return }
+        if (slot >= topSize && !useInventory()) {
+            event.isCancelled = true; return
+        }
 
         val clickedItem = event.currentItem ?: return
         if (clickedItem.type == Material.AIR) return
-        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") { event.isCancelled = true; return }
+        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") {
+            event.isCancelled = true; return
+        }
 
         val menuItem = fixedItems[page]?.get(slot)
             ?: fixedItems[-1]?.get(slot)
@@ -330,6 +337,7 @@ abstract class BasePaginatedMenu(
                 }
             }
 
+            shouldReopen = false
             item.onClickEvent(player, event.click)
         }
 
