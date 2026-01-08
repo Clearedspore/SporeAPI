@@ -5,6 +5,7 @@ import me.clearedSpore.sporeAPI.util.CC.gray
 import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.CC.white
 import me.clearedSpore.sporeAPI.util.ChatInputService
+import me.clearedSpore.sporeAPI.util.Task
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -94,13 +95,19 @@ abstract class BasePaginatedMenu(
 
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
-        if (event.inventory.holder == this && event.player is Player) {
-            if (shouldReopen) {
-                this.open(event.player as Player)
+        if (event.inventory.holder != this) return
+        if (event.player !is Player) return
+
+        val player = event.player as Player
+
+        if (shouldReopen) {
+            Task.run {
+                this.open(player)
             }
-            onClose(event.player as Player)
-            stopAutoRefresh()
         }
+
+        onClose(player)
+        stopAutoRefresh()
     }
 
     open fun onClose(player: Player) {}

@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.util.CC.red
+import me.clearedSpore.sporeAPI.util.Task
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -156,14 +157,21 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
 
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
-        if (event.inventory.holder == this && event.player is Player) {
-            if(shouldReopen){
-                this.open(event.player as Player)
+        if (event.inventory.holder != this) return
+        if (event.player !is Player) return
+
+        val player = event.player as Player
+
+        if (shouldReopen) {
+            Task.run {
+                this.open(player)
             }
-            onClose(event.player as Player)
-            stopAutoRefresh()
         }
+
+        onClose(player)
+        stopAutoRefresh()
     }
+
 
     open fun onClose(player: Player) {}
 
