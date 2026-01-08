@@ -59,4 +59,9 @@ object Task {
             unit.toSeconds(delay) * 20L,
             unit.toSeconds(interval) * 20L
         )
+
+    fun cancel(task: BukkitTask) {
+        task.cancel()
+    }
+
 }
