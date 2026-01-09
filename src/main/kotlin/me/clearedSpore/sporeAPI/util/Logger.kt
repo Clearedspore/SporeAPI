@@ -14,10 +14,12 @@ object Logger {
 
     var pluginName: String = "not initialized"
     var prefix = "\uD83D\uDEE0 $pluginName » ".blue()
+    var developerNotice: String? = null
 
-    fun initialize(name: String) {
+    fun initialize(name: String, developerNotice: String? = null) {
         pluginName = name
         prefix = "\uD83D\uDEE0 $pluginName » ".blue()
+        this.developerNotice = developerNotice
     }
 
     fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
