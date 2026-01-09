@@ -3,8 +3,8 @@ package me.clearedSpore.sporeAPI.exception
 import me.clearedSpore.sporeAPI.util.Logger
 
 class LoggedException(
-    val publicMessage: String,
-    internalMessage: String = publicMessage,
+    private val userMessage: String,
+    internalMessage: String = userMessage,
     private val level: Level = Level.ERROR,
     private val channel: Channel = Channel.GENERAL,
     private val developerOnly: Boolean = false,
@@ -54,8 +54,8 @@ class LoggedException(
 
     fun getPublicMessage(): String {
         return if (developerOnly && !Logger.developerNotice.isNullOrBlank())
-            "$publicMessage\n§7${Logger.developerNotice}"
+            "$userMessage\n§7${Logger.developerNotice}"
         else
-            publicMessage
+            userMessage
     }
 }
