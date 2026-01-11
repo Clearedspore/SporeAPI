@@ -9,7 +9,7 @@ object ChatInputService {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()
 
-    fun begin(player: Player, callback: Consumer<String>, silent: Boolean = false) {
+    fun begin(player: Player, silent: Boolean = false, callback: Consumer<String>) {
         player.closeInventory()
         awaitingInput[player.uniqueId] = callback
         if (!silent) {
