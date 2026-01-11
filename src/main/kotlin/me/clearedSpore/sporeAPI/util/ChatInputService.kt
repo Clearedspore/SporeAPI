@@ -9,10 +9,12 @@ object ChatInputService {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()
 
-    fun begin(player: Player, callback: Consumer<String>) {
+    fun begin(player: Player, callback: Consumer<String>, silent: Boolean = false) {
         player.closeInventory()
         awaitingInput[player.uniqueId] = callback
-        player.sendSuccessMessage("Please type your message in chat. Type 'cancel' to cancel.")
+        if (!silent) {
+            player.sendSuccessMessage("Please type your message in chat. Type 'cancel' to cancel.")
+        }
     }
 
     fun cancel(player: Player) {
