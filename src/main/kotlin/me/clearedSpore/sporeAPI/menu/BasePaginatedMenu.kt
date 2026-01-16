@@ -275,6 +275,35 @@ abstract class BasePaginatedMenu(
         })
     }
 
+    fun addSearchItem(x: Int, y: Int, inputLore: List<String>) {
+        setGlobalMenuItem(x, y, object : Item() {
+            override fun createItem(): ItemStack = ItemStack(Material.OAK_SIGN).apply {
+                itemMeta = itemMeta?.apply {
+                    setDisplayName("Search".blue())
+
+                    val loreList = inputLore.toMutableList()
+                    if (searchQuery.isNotEmpty()) {
+                        loreList.add("Current: $searchQuery".white())
+                    }
+
+                    lore = loreList
+                }
+            }
+
+            override fun onClickEvent(clicker: Player, clickType: ClickType) {
+                clicker.closeInventory()
+                ChatInputService.begin(clicker) { input ->
+                    searchQuery = input.trim().lowercase()
+                    page = 1
+                    applySearch()
+                    setMenuItems()
+                    open(clicker)
+                    if (::inventory.isInitialized) clicker.updateInventory()
+                }
+            }
+        })
+    }
+
     private fun applySearch() {
         items.clear()
         itemToObjectMap.clear()
