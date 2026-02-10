@@ -15,16 +15,14 @@ import org.bukkit.scheduler.BukkitTask
 
 abstract class UtilInventoryMenu(
     protected val viewer: Player,
-    protected val target: Player?,
     protected val editable: Boolean,
     protected val autoRefresh: Boolean,
     protected val utilItems: MutableList<UtilItem>?,
     protected val plugin: JavaPlugin
 ) : Listener {
-    
-    protected lateinit var inventory: Inventory
 
-    protected var refreshTask: BukkitTask? = null
+    protected lateinit var inventory: Inventory
+    private var refreshTask: BukkitTask? = null
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -33,37 +31,34 @@ abstract class UtilInventoryMenu(
     protected abstract val previewContents: Array<ItemStack?>
     protected abstract val previewArmor: Array<ItemStack?>
     protected abstract val previewOffhand: ItemStack?
-
-    protected abstract fun onInventoryUpdate(
-        contents: Array<ItemStack?>,
-        armor: Array<ItemStack?>,
-        offhand: ItemStack?
-    )
+    protected abstract val title: String
+    protected abstract fun onInventoryUpdate(contents: Array<ItemStack?>, armor: Array<ItemStack?>, offhand: ItemStack?)
 
     fun open() {
-        inventory = Bukkit.createInventory(null, 54, this.title!!)
+        inventory = Bukkit.createInventory(null, 54, title)
         redraw()
         viewer.openInventory(inventory)
 
         if (autoRefresh) {
-            refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable { this.redraw() }, 1L, 10L)
+            refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable { redraw() }, 1L, 10L)
         }
     }
-
-    protected abstract val title: String?
 
     protected fun redraw() {
         val contents = previewContents
         val armor = previewArmor
         val offhand = previewOffhand
 
-        for (i in 0 until 27) inventory.setItem(i, contents[i])
-        for (i in 27..35) inventory.setItem(i, contents[i])
+        for (i in 0..8) inventory.setItem(i, contents[i])
+        for (i in 9..17) inventory.setItem(i, contents[i])
+        for (i in 18..26) inventory.setItem(i, contents[i])
+        for (i in 0..8) inventory.setItem(27 + i, contents[27 + i])
 
         inventory.setItem(36, armor[0])
         inventory.setItem(37, armor[1])
         inventory.setItem(38, armor[2])
         inventory.setItem(39, armor[3])
+
         inventory.setItem(41, offhand)
 
         for (i in 45..53) inventory.setItem(i, null)
@@ -79,19 +74,15 @@ abstract class UtilInventoryMenu(
 
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
-        if (event.getInventory() == null || event.getInventory() != inventory) return
+        if (event.inventory != inventory) return
 
-        val slot = event.getRawSlot()
+        val slot = event.rawSlot
 
         if (slot >= 45) {
-            if (utilItems != null) {
-                for (item in utilItems) {
-                    if (item.slot() == slot) {
-                        event.isCancelled = true
-                        item.onClick(viewer, event)
-                        return
-                    }
-                }
+            utilItems?.firstOrNull { it.slot() == slot }?.let {
+                event.isCancelled = true
+                it.onClick(viewer, event)
+                return
             }
             event.isCancelled = true
             return
@@ -102,21 +93,21 @@ abstract class UtilInventoryMenu(
             return
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, Runnable { this.syncBack() }, 1L)
+        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
+
     }
 
     @EventHandler
     fun onDrag(event: InventoryDragEvent) {
-        if (event.inventory == null || event.inventory != inventory) return
+        if (event.inventory != inventory) return
 
-        for (slot in event.rawSlots) {
-            if (!isInventorySlot(slot)) {
-                event.isCancelled = true
-                return
-            }
+        if (event.rawSlots.any { !isInventorySlot(it) }) {
+            event.isCancelled = true
+            return
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, Runnable { this.syncBack() }, 1L)
+        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
+
     }
 
     protected fun syncBack() {
@@ -138,9 +129,8 @@ abstract class UtilInventoryMenu(
 
     @EventHandler
     fun onClose(event: InventoryCloseEvent) {
-        if (event.getInventory() != inventory) return
-
-        if (refreshTask != null) refreshTask!!.cancel()
+        if (event.inventory != inventory) return
+        refreshTask?.cancel()
         HandlerList.unregisterAll(this)
     }
 }
