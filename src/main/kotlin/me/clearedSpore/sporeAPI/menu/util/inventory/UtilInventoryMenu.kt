@@ -119,26 +119,41 @@ abstract class UtilInventoryMenu(
             return
         }
 
-        if (!editable || !isInventorySlot(slot)) {
+        val isArmorOrOffhand = current != null && (current.type.name.contains("LEATHER") || current.type == org.bukkit.Material.PAINTING)
+        if (isArmorOrOffhand) {
             event.isCancelled = true
             return
         }
 
-        if (current != null && current.isSimilar(placeholderItem) ||
-            current != null && current.type.name.contains("LEATHER") ||
-            current != null && current.type == org.bukkit.Material.PAINTING
-        ) {
-            if (cursor != null && cursor.type != org.bukkit.Material.AIR) {
-                inventory.setItem(slot, cursor)
-                event.setCursor(null)
+        if (isInventorySlot(slot)) {
+            val isPreview = this is AbstractInventoryMenu
+            if (isPreview) {
+                val isPlaceholder = current != null && current.isSimilar(placeholderItem)
+
+                when {
+                    isPlaceholder && cursor != null && cursor.type != org.bukkit.Material.AIR -> {
+                        inventory.setItem(slot, cursor)
+                        event.setCursor(null)
+                    }
+
+                    current != null && !isPlaceholder -> {
+                        event.setCursor(current)
+                        inventory.setItem(slot, placeholderItem)
+                    }
+
+                    else -> { }
+                }
+
+                event.isCancelled = true
+            } else {
+                Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
             }
         } else {
-            event.setCursor(current)
-            inventory.setItem(slot, placeholderItem)
+            event.isCancelled = true
         }
-
-        event.isCancelled = true
     }
+
+
 
 
     @EventHandler
