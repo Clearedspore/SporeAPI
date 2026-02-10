@@ -44,29 +44,59 @@ abstract class UtilInventoryMenu(
         }
     }
 
-    protected fun redraw() {
+    protected val placeholderItem: ItemStack
+        get() {
+            val item = org.bukkit.Material.GRAY_STAINED_GLASS_PANE
+            val stack = ItemStack(item, 1)
+            val meta = stack.itemMeta
+            meta?.setDisplayName(" ")
+            stack.itemMeta = meta
+            return stack
+        }
+
+    protected fun getArmorPlaceholder(slotIndex: Int): ItemStack {
+        val material = when (slotIndex) {
+            36 -> org.bukkit.Material.LEATHER_BOOTS
+            37 -> org.bukkit.Material.LEATHER_LEGGINGS
+            38 -> org.bukkit.Material.LEATHER_CHESTPLATE
+            39 -> org.bukkit.Material.LEATHER_HELMET
+            else -> org.bukkit.Material.GRAY_STAINED_GLASS_PANE
+        }
+        val stack = ItemStack(material)
+        val meta = stack.itemMeta
+        meta?.setDisplayName(" ")
+        stack.itemMeta = meta
+        return stack
+    }
+
+    protected fun getOffhandPlaceholder(): ItemStack {
+        val stack = ItemStack(org.bukkit.Material.PAINTING)
+        val meta = stack.itemMeta
+        meta?.setDisplayName(" ")
+        stack.itemMeta = meta
+        return stack
+    }
+
+    protected open fun redraw() {
         val contents = previewContents
         val armor = previewArmor
         val offhand = previewOffhand
 
-        for (i in 0..8) inventory.setItem(i, contents[i])
-        for (i in 9..17) inventory.setItem(i, contents[i])
-        for (i in 18..26) inventory.setItem(i, contents[i])
-        for (i in 0..8) inventory.setItem(27 + i, contents[27 + i])
+        for (i in 0..8) inventory.setItem(i, contents[i] ?: placeholderItem)
+        for (i in 9..17) inventory.setItem(i, contents[i] ?: placeholderItem)
+        for (i in 18..26) inventory.setItem(i, contents[i] ?: placeholderItem)
+        for (i in 27..35) inventory.setItem(i, contents[i] ?: placeholderItem)
 
-        inventory.setItem(36, armor[0])
-        inventory.setItem(37, armor[1])
-        inventory.setItem(38, armor[2])
-        inventory.setItem(39, armor[3])
-
-        inventory.setItem(41, offhand)
+        for (i in 36..39) inventory.setItem(i, armor[i - 36] ?: getArmorPlaceholder(i))
+        inventory.setItem(41, offhand ?: getOffhandPlaceholder())
 
         for (i in 45..53) inventory.setItem(i, null)
-
         utilItems?.forEach { item ->
             inventory.setItem(item.slot(), item.item())
         }
     }
+
+
 
     protected fun isInventorySlot(slot: Int): Boolean {
         return slot <= 41 && slot != 40
@@ -75,8 +105,9 @@ abstract class UtilInventoryMenu(
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
         if (event.inventory != inventory) return
-
         val slot = event.rawSlot
+        val cursor = event.cursor
+        val current = event.currentItem
 
         if (slot >= 45) {
             utilItems?.firstOrNull { it.slot() == slot }?.let {
@@ -93,9 +124,22 @@ abstract class UtilInventoryMenu(
             return
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
+        if (current != null && current.isSimilar(placeholderItem) ||
+            current != null && current.type.name.contains("LEATHER") ||
+            current != null && current.type == org.bukkit.Material.PAINTING
+        ) {
+            if (cursor != null && cursor.type != org.bukkit.Material.AIR) {
+                inventory.setItem(slot, cursor)
+                event.setCursor(null)
+            }
+        } else {
+            event.setCursor(current)
+            inventory.setItem(slot, placeholderItem)
+        }
 
+        event.isCancelled = true
     }
+
 
     @EventHandler
     fun onDrag(event: InventoryDragEvent) {
