@@ -205,16 +205,14 @@ abstract class BasePaginatedMenu(
         val firstSlot = navRow * 9
         val lastSlot = navRow * 9 + 8
 
-        if (!isFixedItemSlot(firstSlot)) inventory.setItem(firstSlot, createPreviousPageItem())
-        if (!isFixedItemSlot(lastSlot)) inventory.setItem(lastSlot, createNextPageItem())
+        if (!isFixedItemSlot(firstSlot)) setMenuItem(1, navRow + 1, createPreviousPageItem())
+        if (!isFixedItemSlot(lastSlot)) setMenuItem(9, navRow + 1, createNextPageItem())
     }
-
 
     private fun placeFooter() {
         if (getRows() < 3) return
         val bottomRowStart = (getRows() - 1) * 9
-        val grayPane =
-            ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply { itemMeta = itemMeta?.apply { setDisplayName(" ") } }
+        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply { itemMeta = itemMeta?.apply { setDisplayName(" ") } }
 
         for (row in 1 until getRows() - 1) {
             placeGlassPaneIfNotFixed(row * 9, grayPane)
@@ -223,8 +221,8 @@ abstract class BasePaginatedMenu(
         for (i in 0 until 9) placeGlassPaneIfNotFixed(i, grayPane)
         for (i in bottomRowStart + 1 until bottomRowStart + 8) placeGlassPaneIfNotFixed(i, grayPane)
 
-        if (!isFixedItemSlot(bottomRowStart)) inventory.setItem(bottomRowStart, createPreviousPageItem())
-        if (!isFixedItemSlot(bottomRowStart + 8)) inventory.setItem(bottomRowStart + 8, createNextPageItem())
+        if (!isFixedItemSlot(bottomRowStart)) setMenuItem(1, getRows(), createPreviousPageItem())
+        if (!isFixedItemSlot(bottomRowStart + 8)) setMenuItem(9, getRows(), createNextPageItem())
     }
 
     private fun placeGlassPaneIfNotFixed(slot: Int, pane: ItemStack) {
@@ -234,21 +232,34 @@ abstract class BasePaginatedMenu(
     private fun isFixedItemSlot(slot: Int): Boolean =
         fixedItems[page]?.containsKey(slot) == true || fixedItems[-1]?.containsKey(slot) == true
 
-    fun createPreviousPageItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
-        itemMeta = itemMeta?.apply {
-            setDisplayName("Previous page".blue())
-            lore = mutableListOf("Click to go to the previous page".gray(), "Current page: $page".gray())
+    fun createPreviousPageItem(): Item = object : Item() {
+        override fun createItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
+            itemMeta = itemMeta?.apply {
+                setDisplayName("Previous page".blue())
+                lore = mutableListOf("Click to go to the previous page".gray(), "Current page: $page".gray())
+            }
         }
-        if (page >= 1) amount = page
+
+        override fun onClickEvent(clicker: Player, clickType: ClickType) {
+            previousPage()
+            clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
+        }
     }
 
-    fun createNextPageItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
-        itemMeta = itemMeta?.apply {
-            setDisplayName("Next page".blue())
-            lore = mutableListOf("Click to go to the next page".gray(), "Current page: $page".gray())
+    fun createNextPageItem(): Item = object : Item() {
+        override fun createItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
+            itemMeta = itemMeta?.apply {
+                setDisplayName("Next page".blue())
+                lore = mutableListOf("Click to go to the next page".gray(), "Current page: $page".gray())
+            }
         }
-        if (page >= 1) amount = page
+
+        override fun onClickEvent(clicker: Player, clickType: ClickType) {
+            nextPage()
+            clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
+        }
     }
+
 
     fun addSearchItem(x: Int, y: Int) {
         setGlobalMenuItem(x, y, object : Item() {
