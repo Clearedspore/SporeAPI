@@ -173,57 +173,68 @@ abstract class BasePaginatedMenu(
     private fun placePaginatedItems() {
         val start = (page - 1) * getItemsPerPage()
         val end = minOf(start + getItemsPerPage(), items.size)
-        var slotIndex = 0
         val itemsPerRow = if (footer) 7 else 9
         val navRow = getNavigationRow()
 
+        var placedCount = 0
         for (i in start until end) {
-            val row = (slotIndex / itemsPerRow) + getStartRow()
-            val col = if (footer) (slotIndex % 7) + 1 else slotIndex % 9
+            val row = getStartRow() + (placedCount / itemsPerRow)
+            val col = if (footer) (placedCount % itemsPerRow) + 1 else (placedCount % itemsPerRow)
             val slot = row * 9 + col
 
             if (slot / 9 == navRow) {
-                slotIndex++
+                placedCount++
                 continue
             }
 
-            if (!isFixedItemSlot(slot) && inventory.getItem(slot) == null) {
+            if (!isFixedItemSlot(slot) && slot in 0 until inventory.size) {
                 val stack = items[i]
                 inventory.setItem(slot, stack)
-                val itemObj = itemToObjectMap[stack]
-                paginatedItemMap[slot] = itemObj ?: object : Item() {
+                paginatedItemMap[slot] = itemToObjectMap[stack] ?: object : Item() {
                     override fun createItem(): ItemStack = stack
                     override fun onClickEvent(clicker: Player, clickType: ClickType) {}
                 }
             }
-            slotIndex++
+
+            placedCount++
         }
     }
 
+
     private fun placeNavigationItems() {
         val navRow = getNavigationRow()
-        val firstSlot = navRow * 9
-        val lastSlot = navRow * 9 + 8
+        val bottomRow = (navRow + 1) * 9
 
-        if (!isFixedItemSlot(firstSlot)) setMenuItem(1, navRow + 1, createPreviousPageItem())
-        if (!isFixedItemSlot(lastSlot)) setMenuItem(9, navRow + 1, createNextPageItem())
+        val prevSlot = navRow * 9
+        if (!isFixedItemSlot(prevSlot)) setMenuItem(1, navRow + 1, createPreviousPageItem())
+
+        val nextSlot = navRow * 9 + 8
+        if (!isFixedItemSlot(nextSlot)) setMenuItem(9, navRow + 1, createNextPageItem())
     }
 
     private fun placeFooter() {
         if (getRows() < 3) return
-        val bottomRowStart = (getRows() - 1) * 9
-        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply { itemMeta = itemMeta?.apply { setDisplayName(" ") } }
+
+        val bottomRow = getRows() - 1
+        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply {
+            itemMeta = itemMeta?.apply { setDisplayName(" ") }
+        }
+
+        for (col in 0 until 9) {
+            val slot = bottomRow * 9 + col
+            if (!isFixedItemSlot(slot) && slot != bottomRow * 9 && slot != bottomRow * 9 + 8) {
+                inventory.setItem(slot, grayPane)
+            }
+        }
 
         for (row in 1 until getRows() - 1) {
-            placeGlassPaneIfNotFixed(row * 9, grayPane)
-            placeGlassPaneIfNotFixed(row * 9 + 8, grayPane)
+            val left = row * 9
+            val right = row * 9 + 8
+            placeGlassPaneIfNotFixed(left, grayPane)
+            placeGlassPaneIfNotFixed(right, grayPane)
         }
-        for (i in 0 until 9) placeGlassPaneIfNotFixed(i, grayPane)
-        for (i in bottomRowStart + 1 until bottomRowStart + 8) placeGlassPaneIfNotFixed(i, grayPane)
-
-        if (!isFixedItemSlot(bottomRowStart)) setMenuItem(1, getRows(), createPreviousPageItem())
-        if (!isFixedItemSlot(bottomRowStart + 8)) setMenuItem(9, getRows(), createNextPageItem())
     }
+
 
     private fun placeGlassPaneIfNotFixed(slot: Int, pane: ItemStack) {
         if (!isFixedItemSlot(slot)) inventory.setItem(slot, pane)
