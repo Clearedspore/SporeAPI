@@ -221,6 +221,13 @@ abstract class BasePaginatedMenu(
         }
 
         for (col in 0 until 9) {
+            val slot = col
+            if (!isFixedItemSlot(slot)) {
+                inventory.setItem(slot, grayPane)
+            }
+        }
+
+        for (col in 0 until 9) {
             val slot = bottomRow * 9 + col
             if (!isFixedItemSlot(slot) && slot != bottomRow * 9 && slot != bottomRow * 9 + 8) {
                 inventory.setItem(slot, grayPane)
