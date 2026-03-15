@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.menu.util.inventory
 
+import me.clearedSpore.sporeAPI.util.CC.translate
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -45,16 +46,26 @@ abstract class UtilInventoryMenu(
     }
 
     protected val placeholderItem: ItemStack
-        get() {
-            val item = org.bukkit.Material.GRAY_STAINED_GLASS_PANE
-            val stack = ItemStack(item, 1)
-            val meta = stack.itemMeta
-            meta?.setDisplayName(" ")
-            stack.itemMeta = meta
-            return stack
-        }
+        get() = placeholderWithName("Slot: Empty")
+
+    protected fun namedPlaceholder(name: String): ItemStack {
+        val stack = ItemStack(org.bukkit.Material.GRAY_STAINED_GLASS_PANE)
+        val meta = stack.itemMeta
+        meta?.setDisplayName("&7$name".translate())
+        stack.itemMeta = meta
+        return stack
+    }
+
+    protected fun placeholderWithName(name: String) = namedPlaceholder(name)
 
     protected fun getArmorPlaceholder(slotIndex: Int): ItemStack {
+        val name = when (slotIndex) {
+            36 -> "Slot: Boots"
+            37 -> "Slot: Leggings"
+            38 -> "Slot: Chestplate"
+            39 -> "Slot: Helmet"
+            else -> "Slot: Empty"
+        }
         val material = when (slotIndex) {
             36 -> org.bukkit.Material.LEATHER_BOOTS
             37 -> org.bukkit.Material.LEATHER_LEGGINGS
@@ -64,15 +75,17 @@ abstract class UtilInventoryMenu(
         }
         val stack = ItemStack(material)
         val meta = stack.itemMeta
-        meta?.setDisplayName(" ")
+        meta?.setDisplayName("&7$name".translate())
         stack.itemMeta = meta
         return stack
     }
 
+
+
     protected fun getOffhandPlaceholder(): ItemStack {
         val stack = ItemStack(org.bukkit.Material.PAINTING)
         val meta = stack.itemMeta
-        meta?.setDisplayName(" ")
+        meta?.setDisplayName("&7Slot: Offhand".translate())
         stack.itemMeta = meta
         return stack
     }
@@ -82,10 +95,13 @@ abstract class UtilInventoryMenu(
         val armor = previewArmor
         val offhand = previewOffhand
 
-        for (i in 0..8) inventory.setItem(i, contents[i] ?: placeholderItem)
-        for (i in 9..17) inventory.setItem(i, contents[i] ?: placeholderItem)
-        for (i in 18..26) inventory.setItem(i, contents[i] ?: placeholderItem)
-        for (i in 27..35) inventory.setItem(i, contents[i] ?: placeholderItem)
+        for (i in 0..8) inventory.setItem(i, contents[i + 9] ?: namedPlaceholder("Slot: ${i + 1}"))
+
+        for (i in 9..17) inventory.setItem(i, contents[i + 9] ?: namedPlaceholder("Slot: ${i - 8}"))
+
+        for (i in 18..26) inventory.setItem(i, contents[i + 9] ?: namedPlaceholder("Slot: ${i - 17}"))
+
+        for (i in 27..35) inventory.setItem(i, contents[i - 27] ?: namedPlaceholder("Slot: ${i - 26}"))
 
         for (i in 36..39) inventory.setItem(i, armor[i - 36] ?: getArmorPlaceholder(i))
         inventory.setItem(41, offhand ?: getOffhandPlaceholder())
@@ -126,25 +142,33 @@ abstract class UtilInventoryMenu(
         }
 
         if (isInventorySlot(slot)) {
-            val isPreview = this is AbstractInventoryMenu
-            if (isPreview) {
-                val isPlaceholder = current != null && current.isSimilar(placeholderItem)
+            val isEditable = editable
+            if (isEditable) {
+                event.isCancelled = true
+                val isPlaceholder = current == null || current.isSimilar(placeholderItem) ||
+                        current.itemMeta?.displayName?.startsWith("§7Slot:") == true
+
+                val cursorItem = event.cursor
+                val hasCursor = cursorItem != null && cursorItem.type != org.bukkit.Material.AIR
 
                 when {
-                    isPlaceholder && cursor != null && cursor.type != org.bukkit.Material.AIR -> {
-                        inventory.setItem(slot, cursor)
+                    isPlaceholder && hasCursor -> {
+                        inventory.setItem(slot, cursorItem)
                         event.setCursor(null)
+                        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
                     }
-
-                    current != null && !isPlaceholder -> {
+                    !isPlaceholder && !hasCursor -> {
                         event.setCursor(current)
-                        inventory.setItem(slot, placeholderItem)
+                        inventory.setItem(slot, namedPlaceholder("Slot: ${slot + 1}"))
+                        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
                     }
-
+                    !isPlaceholder && hasCursor -> {
+                        inventory.setItem(slot, cursorItem)
+                        event.setCursor(current)
+                        Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
+                    }
                     else -> { }
                 }
-
-                event.isCancelled = true
             } else {
                 Bukkit.getScheduler().runTaskLater(plugin, Runnable { syncBack() }, 1L)
             }
@@ -173,8 +197,10 @@ abstract class UtilInventoryMenu(
         val contents = arrayOfNulls<ItemStack>(36)
         val armor = arrayOfNulls<ItemStack>(4)
 
-        for (i in 0..26) contents[i] = inventory.getItem(i)
-        for (i in 27..35) contents[i] = inventory.getItem(i)
+        for (i in 0..8) contents[i + 9] = inventory.getItem(i)
+        for (i in 9..17) contents[i + 9] = inventory.getItem(i)
+        for (i in 18..26) contents[i + 9] = inventory.getItem(i)
+        for (i in 27..35) contents[i - 27] = inventory.getItem(i)
 
         armor[0] = inventory.getItem(36)
         armor[1] = inventory.getItem(37)

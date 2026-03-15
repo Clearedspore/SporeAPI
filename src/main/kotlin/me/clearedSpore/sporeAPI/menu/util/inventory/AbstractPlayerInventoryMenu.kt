@@ -15,7 +15,9 @@ abstract class AbstractPlayerInventoryMenu(
 
     private val menuContents: Array<ItemStack?> = Array(36) { target.inventory.getItem(it) }
     private val menuArmor: Array<ItemStack?> = Array(4) { target.inventory.armorContents[it] }
-    private var menuOffhand: ItemStack? = target.inventory.itemInOffHand
+    private var menuOffhand: ItemStack? = target.inventory.itemInOffHand.takeIf {
+        it.type != org.bukkit.Material.AIR
+    }
 
     override val previewContents: Array<ItemStack?> get() = menuContents
     override val previewArmor: Array<ItemStack?> get() = menuArmor
