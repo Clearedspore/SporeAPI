@@ -59,6 +59,7 @@ abstract class BasePaginatedMenu(
     abstract fun createItems()
     protected abstract fun onInventoryClickEvent(clicker: Player, clickType: ClickType, event: InventoryClickEvent)
 
+
     private var autoRefreshTask: BukkitRunnable? = null
     private var autoRefreshEnabled = true
 
@@ -371,8 +372,16 @@ abstract class BasePaginatedMenu(
 
         val slot = event.rawSlot
         val topSize = event.view.topInventory.size
-        if (slot >= topSize && !useInventory()) {
-            event.isCancelled = true; return
+
+        if (slot >= topSize) {
+            val clickedItem = event.currentItem
+            if (clickedItem != null && clickedItem.type != Material.AIR) {
+                event.isCancelled = true
+                onPlayerInventoryClick(player, event.click, clickedItem, event)
+            } else {
+                if (!useInventory()) event.isCancelled = true
+            }
+            return
         }
 
         val clickedItem = event.currentItem ?: return
@@ -413,6 +422,7 @@ abstract class BasePaginatedMenu(
         if (autoRefreshOnClick) refreshMenu(player)
     }
 
+    open fun onPlayerInventoryClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
 
     override fun getInventory(): Inventory = inventory
 }
