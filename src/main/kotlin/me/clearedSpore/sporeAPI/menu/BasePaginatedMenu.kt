@@ -112,6 +112,8 @@ abstract class BasePaginatedMenu(
     }
 
     open fun onClose(player: Player) {}
+    open fun onPlayerInventoryClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
+
 
     fun startAutoRefresh() {
         stopAutoRefresh()
@@ -421,8 +423,6 @@ abstract class BasePaginatedMenu(
         player.playSound(player.location, clickSound(), 0.5f, 1.0f)
         if (autoRefreshOnClick) refreshMenu(player)
     }
-
-    open fun onPlayerInventoryClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
 
     override fun getInventory(): Inventory = inventory
 }
