@@ -22,6 +22,7 @@ object CC {
         var message = this
 
         message = message.replace("&cb", "&#1D91FF")
+        message = message.replace("&cr", "&#F50000")
 
         val matcher = HEX_PATTERN.matcher(message)
         while (matcher.find()) {
