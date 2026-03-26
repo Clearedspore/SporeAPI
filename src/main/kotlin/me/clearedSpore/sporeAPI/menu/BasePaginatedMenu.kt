@@ -112,7 +112,7 @@ abstract class BasePaginatedMenu(
     }
 
     open fun onClose(player: Player) {}
-    open fun onPlayerInventoryClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
+    open fun onBottomInvClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
 
 
     fun startAutoRefresh() {
@@ -379,7 +379,7 @@ abstract class BasePaginatedMenu(
             val clickedItem = event.currentItem
             if (clickedItem != null && clickedItem.type != Material.AIR) {
                 event.isCancelled = true
-                onPlayerInventoryClick(player, event.click, clickedItem, event)
+                onBottomInvClick(player, event.click, clickedItem, event)
             } else {
                 if (!useInventory()) event.isCancelled = true
             }
