@@ -376,6 +376,7 @@ abstract class BasePaginatedMenu(
         val topSize = event.view.topInventory.size
 
         if (slot >= topSize) {
+            println("Bottom inv clicked! slot=$slot, item=${event.currentItem?.type}, cursor=${event.cursor?.type}")
             val clickedItem = event.currentItem
             if (clickedItem != null && clickedItem.type != Material.AIR) {
                 event.isCancelled = true
