@@ -59,7 +59,6 @@ abstract class BasePaginatedMenu(
     abstract fun createItems()
     protected abstract fun onInventoryClickEvent(clicker: Player, clickType: ClickType, event: InventoryClickEvent)
 
-
     private var autoRefreshTask: BukkitRunnable? = null
     private var autoRefreshEnabled = true
 
@@ -72,14 +71,14 @@ abstract class BasePaginatedMenu(
     }
 
     fun nextPage() {
-        if ((page + 1) * getItemsPerPage() < items.size) {
+        if (page * getItemsPerPage() < items.size) {
             page++
             setMenuItems()
         }
     }
 
     fun previousPage() {
-        if (page > 0) {
+        if (page > 1) {
             page--
             setMenuItems()
         }
@@ -113,7 +112,6 @@ abstract class BasePaginatedMenu(
 
     open fun onClose(player: Player) {}
     open fun onBottomInvClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
-
 
     fun startAutoRefresh() {
         stopAutoRefresh()
@@ -162,16 +160,12 @@ abstract class BasePaginatedMenu(
         placePaginatedItems()
     }
 
-
     private fun placeFixedItems() {
         fixedItems[-1]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
         fixedItems[page]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
     }
 
-    private fun getNavigationRow(): Int {
-        return if (footer) getRows() - 1 else 0
-    }
-
+    private fun getNavigationRow(): Int = if (footer) getRows() - 1 else 0
 
     private fun placePaginatedItems() {
         val start = (page - 1) * getItemsPerPage()
@@ -203,10 +197,8 @@ abstract class BasePaginatedMenu(
         }
     }
 
-
     private fun placeNavigationItems() {
         val navRow = getNavigationRow()
-        val bottomRow = (navRow + 1) * 9
 
         val prevSlot = navRow * 9
         if (!isFixedItemSlot(prevSlot)) setMenuItem(1, navRow + 1, createPreviousPageItem())
@@ -225,9 +217,7 @@ abstract class BasePaginatedMenu(
 
         for (col in 0 until 9) {
             val slot = col
-            if (!isFixedItemSlot(slot)) {
-                inventory.setItem(slot, grayPane)
-            }
+            if (!isFixedItemSlot(slot)) inventory.setItem(slot, grayPane)
         }
 
         for (col in 0 until 9) {
@@ -238,13 +228,12 @@ abstract class BasePaginatedMenu(
         }
 
         for (row in 1 until getRows() - 1) {
-            val left = row * 9
+            val left  = row * 9
             val right = row * 9 + 8
             placeGlassPaneIfNotFixed(left, grayPane)
             placeGlassPaneIfNotFixed(right, grayPane)
         }
     }
-
 
     private fun placeGlassPaneIfNotFixed(slot: Int, pane: ItemStack) {
         if (!isFixedItemSlot(slot)) inventory.setItem(slot, pane)
@@ -257,7 +246,10 @@ abstract class BasePaginatedMenu(
         override fun createItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
             itemMeta = itemMeta?.apply {
                 setDisplayName("Previous page".blue())
-                lore = mutableListOf("Click to go to the previous page".gray(), "Current page: $page".gray())
+                lore = mutableListOf(
+                    "Click to go to the previous page".gray(),
+                    "Current page: $page".gray()
+                )
             }
         }
 
@@ -271,7 +263,10 @@ abstract class BasePaginatedMenu(
         override fun createItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
             itemMeta = itemMeta?.apply {
                 setDisplayName("Next page".blue())
-                lore = mutableListOf("Click to go to the next page".gray(), "Current page: $page".gray())
+                lore = mutableListOf(
+                    "Click to go to the next page".gray(),
+                    "Current page: $page".gray()
+                )
             }
         }
 
@@ -280,7 +275,6 @@ abstract class BasePaginatedMenu(
             clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
         }
     }
-
 
     fun addSearchItem(x: Int, y: Int) {
         setGlobalMenuItem(x, y, object : Item() {
@@ -312,12 +306,8 @@ abstract class BasePaginatedMenu(
             override fun createItem(): ItemStack = ItemStack(Material.OAK_SIGN).apply {
                 itemMeta = itemMeta?.apply {
                     setDisplayName("Search".blue())
-
                     val loreList = inputLore.toMutableList()
-                    if (searchQuery.isNotEmpty()) {
-                        loreList.add("Current: $searchQuery".white())
-                    }
-
+                    if (searchQuery.isNotEmpty()) loreList.add("Current: $searchQuery".white())
                     lore = loreList
                 }
             }
@@ -365,7 +355,6 @@ abstract class BasePaginatedMenu(
 
         player?.updateInventory() ?: inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
     }
-
 
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
