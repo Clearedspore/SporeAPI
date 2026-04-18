@@ -1,12 +1,12 @@
 package me.clearedSpore.sporeAPI
 
-import co.aikar.commands.BaseCommand
 import co.aikar.commands.Locales
 import co.aikar.commands.MessageKeys
 import co.aikar.commands.PaperCommandManager
 import me.clearedSpore.sporeAPI.annotation.RegisterCommand
 import me.clearedSpore.sporeAPI.annotation.RegisterListener
 import me.clearedSpore.sporeAPI.bossbar.BossBarManager
+import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
 import me.clearedSpore.sporeAPI.serialization.SporeSerialization
 import me.clearedSpore.sporeAPI.task.SporeScheduler
@@ -42,9 +42,9 @@ open class SporePlugin : JavaPlugin() {
     }
 
     private val modules = mutableListOf<SporeModule>()
-    private val pluginCommands = mutableListOf<BaseCommand>()
+    private val pluginCommands = mutableListOf<SporeCommand>()
 
-    protected fun registerCommand(command: BaseCommand) {
+    protected fun registerCommand(command: SporeCommand) {
         pluginCommands += command
     }
 
@@ -174,12 +174,12 @@ open class SporePlugin : JavaPlugin() {
 
         classes.forEach { clazz ->
             try {
-                if (!BaseCommand::class.java.isAssignableFrom(clazz)) {
+                if (!SporeCommand::class.java.isAssignableFrom(clazz)) {
                     Logger.warn("Class ${clazz.simpleName} is annotated with @RegisterCommand but does not extend BaseCommand")
                     return@forEach
                 }
 
-                val instance = clazz.getDeclaredConstructor().newInstance() as BaseCommand
+                val instance = clazz.getDeclaredConstructor().newInstance() as SporeCommand
 
                 commandManager.registerCommand(instance)
                 count++

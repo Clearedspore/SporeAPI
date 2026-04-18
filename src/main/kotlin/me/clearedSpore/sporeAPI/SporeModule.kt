@@ -1,6 +1,6 @@
 package me.clearedSpore.sporeAPI
 
-import co.aikar.commands.BaseCommand
+import me.clearedSpore.sporeAPI.command.SporeCommand
 import org.bukkit.event.Listener
 
 // Copyright (c) 2025 ClearedSpore
@@ -16,7 +16,7 @@ abstract class SporeModule {
         this.plugin = plugin
     }
 
-    open fun getCommands(): List<BaseCommand> = emptyList()
+    open fun getCommands(): List<SporeCommand> = emptyList()
     open fun getListeners(): List<Listener> = emptyList()
 
     open fun onLoad() {}
