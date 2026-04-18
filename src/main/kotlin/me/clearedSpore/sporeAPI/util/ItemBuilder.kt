@@ -26,9 +26,6 @@ class ItemBuilder private constructor(
     private val item: ItemStack,
     private val meta: ItemMeta
 ) {
-
-
-
     companion object {
         lateinit var instance: JavaPlugin
             private set
