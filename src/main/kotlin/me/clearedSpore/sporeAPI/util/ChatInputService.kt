@@ -5,6 +5,10 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.function.Consumer
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
+
 object ChatInputService {
 
     private val awaitingInput = mutableMapOf<UUID, Consumer<String>>()

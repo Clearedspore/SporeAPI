@@ -1,7 +1,7 @@
 package me.clearedSpore.sporeAPI.menu
 
+import me.clearedSpore.sporeAPI.menu.item.Item
 import me.clearedSpore.sporeAPI.util.CC.blue
-import me.clearedSpore.sporeAPI.util.CC.white
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material

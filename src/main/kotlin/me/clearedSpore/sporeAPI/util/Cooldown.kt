@@ -8,9 +8,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 object Cooldown {
 
-    private val cooldownDurations = mutableMapOf<String, Long>()
-    private val activeCooldowns = mutableMapOf<String, MutableMap<UUID, Long>>()
-
+    private val cooldownDurations = ConcurrentHashMap<String, Long>()
+    private val activeCooldowns = ConcurrentHashMap<String, ConcurrentHashMap<UUID, Long>>()
 
     fun createCooldown(id: String, durationSeconds: Long) {
         cooldownDurations[id] = durationSeconds * 1000
@@ -20,13 +19,12 @@ object Cooldown {
         val duration = cooldownDurations[id]
             ?: throw IllegalArgumentException("Cooldown ID not found: $id")
 
-        activeCooldowns.computeIfAbsent(id) { mutableMapOf() }[playerId] =
+        activeCooldowns.computeIfAbsent(id) { ConcurrentHashMap() }[playerId] =
             System.currentTimeMillis() + duration
     }
 
     fun isOnCooldown(id: String, playerId: UUID): Boolean =
         getTimeLeft(id, playerId) > 0
-
 
     fun updateCooldownDuration(id: String, newDurationSeconds: Long) {
         if (!cooldownDurations.containsKey(id)) {
@@ -35,7 +33,6 @@ object Cooldown {
         cooldownDurations[id] = newDurationSeconds * 1000
     }
 
-
     fun getTimeLeft(id: String, playerId: UUID): Long =
         activeCooldowns[id]?.get(playerId)?.let {
             (it - System.currentTimeMillis()).coerceAtLeast(0)
@@ -43,8 +40,21 @@ object Cooldown {
 
     fun removeCooldown(id: String, playerId: UUID) {
         activeCooldowns[id]?.remove(playerId)
+
         if (activeCooldowns[id]?.isEmpty() == true) {
             activeCooldowns.remove(id)
+        }
+    }
+
+    fun cleanup() {
+        val now = System.currentTimeMillis()
+
+        activeCooldowns.forEach { (id, map) ->
+            map.entries.removeIf { it.value <= now }
+
+            if (map.isEmpty()) {
+                activeCooldowns.remove(id)
+            }
         }
     }
 }

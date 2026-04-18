@@ -13,12 +13,12 @@ import java.net.URL
 object Logger {
 
     var pluginName: String = "not initialized"
-    var prefix = "\uD83D\uDEE0 $pluginName » ".blue()
+    val prefix: String
+        get() = "\uD83D\uDEE0 $pluginName » ".blue()
     var developerNotice: String? = null
 
     fun initialize(name: String, developerNotice: String? = null) {
         pluginName = name
-        prefix = "\uD83D\uDEE0 $pluginName » ".blue()
         this.developerNotice = developerNotice
     }
 

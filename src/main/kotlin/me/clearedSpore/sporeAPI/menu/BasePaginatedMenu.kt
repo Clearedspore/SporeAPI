@@ -1,13 +1,11 @@
 package me.clearedSpore.sporeAPI.menu
 
-import me.clearedSpore.sporeAPI.util.CC.blue
-import me.clearedSpore.sporeAPI.util.CC.gray
+import me.clearedSpore.sporeAPI.menu.item.BuilderItem
+import me.clearedSpore.sporeAPI.menu.item.Item
+import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.CC.red
-import me.clearedSpore.sporeAPI.util.CC.white
-import me.clearedSpore.sporeAPI.util.ChatInputService
-import me.clearedSpore.sporeAPI.util.Task
+import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.entity.Player
@@ -20,8 +18,12 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
-import java.util.*
+import java.util.UUID
+
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
+
 
 abstract class BasePaginatedMenu(
     protected val plugin: JavaPlugin,
@@ -29,389 +31,254 @@ abstract class BasePaginatedMenu(
 ) : InventoryHolder, Listener {
 
     private lateinit var inventory: Inventory
-    protected val originalItems = mutableListOf<Item>()
-    protected val items = mutableListOf<ItemStack>()
-    protected val fixedItems = mutableMapOf<Int, MutableMap<Int, Item>>()
-    protected val paginatedItemMap = mutableMapOf<Int, Item>()
+
+    private val sourceItems = mutableListOf<Item>()
+    private val filteredItems = mutableListOf<Item>()
+
+    private val fixedItems = mutableMapOf<Int, MutableMap<Int, Item>>()
+    private val slotMap = mutableMapOf<Int, Item>()
+
+    private val clickHistory = mutableMapOf<Int, MutableMap<UUID, MutableList<Long>>>()
+
     protected var page = 1
-    protected var searchQuery: String = ""
-    protected var autoRefreshOnClick: Boolean = true
-    private val itemToObjectMap = WeakHashMap<ItemStack, Item>()
+    protected var searchQuery = ""
 
     var shouldReopen = false
+    var autoRefreshOnClick = true
+    var useInventory = false
+    var cancelClicks = true
+    var autoRefreshEnabled = true
 
-    private val SPAM_MAX_CLICKS = 3
-    private val SPAM_TIME_WINDOW_MS = 2000L
+    private var refreshTask: org.bukkit.scheduler.BukkitTask? = null
 
-    private val slotClickTimestamps: MutableMap<Int, MutableMap<UUID, MutableList<Long>>> = mutableMapOf()
+    private val SPAM_MAX = 3
+    private val SPAM_WINDOW = 2000L
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
 
-    open fun useInventory(): Boolean = false
-    open fun cancelClicks(): Boolean = true
-    open fun clickSound(): Sound = Sound.UI_BUTTON_CLICK
-    open fun getStartRow(): Int = if (footer) 1 else 1
+    fun addItem(builder: ItemBuilder.() -> Unit, click: (Player, ClickType) -> Unit) {
+        addItem(BuilderItem(builder, click))
+    }
 
     abstract fun getMenuName(): String
     abstract fun getRows(): Int
     abstract fun createItems()
-    protected abstract fun onInventoryClickEvent(clicker: Player, clickType: ClickType, event: InventoryClickEvent)
+    abstract fun onInventoryClick(player: Player, click: ClickType, event: InventoryClickEvent)
 
-    private var autoRefreshTask: BukkitRunnable? = null
-    private var autoRefreshEnabled = true
+    open fun onClose(player: Player) {}
+
+    override fun getInventory(): Inventory = inventory
 
     fun open(player: Player) {
         inventory = Bukkit.createInventory(this, getRows() * 9, getMenuName())
         createItems()
         applySearch()
-        setMenuItems()
+        render()
         player.openInventory(inventory)
     }
 
+    fun addItem(item: Item) {
+        sourceItems.add(item)
+        filteredItems.add(item)
+    }
+
+    fun clearItems() {
+        sourceItems.clear()
+        filteredItems.clear()
+        slotMap.clear()
+        fixedItems.clear()
+    }
+
     fun nextPage() {
-        if (page * getItemsPerPage() < items.size) {
+        if (page * itemsPerPage() < filteredItems.size) {
             page++
-            setMenuItems()
+            render()
         }
     }
 
     fun previousPage() {
         if (page > 1) {
             page--
-            setMenuItems()
+            render()
         }
     }
 
-    fun getItemsPerPage(): Int = if (footer) (getRows() - 2) * 7 else (getRows() - getStartRow()) * 9
-
-    fun addItem(item: Item) {
-        originalItems.add(item)
-        val stack = item.createItem()
-        items.add(stack)
-        itemToObjectMap[stack] = item
-    }
-
-    @EventHandler
-    fun onInventoryClose(event: InventoryCloseEvent) {
-        if (event.inventory.holder != this) return
-        if (event.player !is Player) return
-
-        val player = event.player as Player
-
-        if (shouldReopen) {
-            Task.run {
-                this.open(player)
-            }
-        }
-
-        onClose(player)
-        stopAutoRefresh()
-    }
-
-    open fun onClose(player: Player) {}
-    open fun onBottomInvClick(clicker: Player, clickType: ClickType, item: ItemStack, event: InventoryClickEvent) {}
-
-    fun startAutoRefresh() {
-        stopAutoRefresh()
-        if (!autoRefreshEnabled) return
-
-        autoRefreshTask = object : BukkitRunnable() {
-            override fun run() {
-                if (!::inventory.isInitialized) return
-                if (inventory.viewers.isNotEmpty()) {
-                    inventory.viewers.filterIsInstance<Player>().forEach { refreshMenu(it) }
-                } else cancel()
-            }
-        }
-        autoRefreshTask?.runTaskTimer(plugin, 20L, 20L)
-    }
-
-    fun stopAutoRefresh() {
-        autoRefreshTask?.cancel()
-        autoRefreshTask = null
-    }
-
-    fun setAutoRefresh(enabled: Boolean) {
-        autoRefreshEnabled = enabled
-        if (!enabled) stopAutoRefresh()
-    }
-
-    fun setGlobalMenuItem(x: Int, y: Int, item: Item) = setMenuItem(x, y, -1, item)
-
-    fun setMenuItem(x: Int, y: Int, pageNumber: Int, item: Item) {
+    fun setMenuItem(x: Int, y: Int, item: Item, global: Boolean = false) {
         val slot = (y - 1) * 9 + (x - 1)
-        fixedItems.computeIfAbsent(pageNumber) { mutableMapOf() }[slot] = item
-        if (::inventory.isInitialized && (pageNumber == -1 || pageNumber == page)) {
+
+        fixedItems.computeIfAbsent(if (global) -1 else page) { mutableMapOf() }[slot] = item
+
+        if (::inventory.isInitialized) {
             inventory.setItem(slot, item.createItem())
         }
     }
 
-    @Deprecated("Use setMenuItem with page number")
-    fun setMenuItem(x: Int, y: Int, item: Item) = setMenuItem(x, y, page, item)
-
-    fun setMenuItems() {
-        inventory.clear()
-        paginatedItemMap.clear()
-        placeFixedItems()
-        if (footer) placeFooter()
-        placeNavigationItems()
-        placePaginatedItems()
+    private fun itemsPerPage(): Int {
+        return if (footer) (getRows() - 2) * 7 else getRows() * 9
     }
 
-    private fun placeFixedItems() {
-        fixedItems[-1]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
-        fixedItems[page]?.forEach { (slot, item) -> inventory.setItem(slot, item.createItem()) }
-    }
-
-    private fun getNavigationRow(): Int = if (footer) getRows() - 1 else 0
-
-    private fun placePaginatedItems() {
-        val start = (page - 1) * getItemsPerPage()
-        val end = minOf(start + getItemsPerPage(), items.size)
-        val itemsPerRow = if (footer) 7 else 9
-        val navRow = getNavigationRow()
-
-        var placedCount = 0
-        for (i in start until end) {
-            val row = getStartRow() + (placedCount / itemsPerRow)
-            val col = if (footer) (placedCount % itemsPerRow) + 1 else (placedCount % itemsPerRow)
-            val slot = row * 9 + col
-
-            if (slot / 9 == navRow) {
-                placedCount++
-                continue
-            }
-
-            if (!isFixedItemSlot(slot) && slot in 0 until inventory.size) {
-                val stack = items[i]
-                inventory.setItem(slot, stack)
-                paginatedItemMap[slot] = itemToObjectMap[stack] ?: object : Item() {
-                    override fun createItem(): ItemStack = stack
-                    override fun onClickEvent(clicker: Player, clickType: ClickType) {}
-                }
-            }
-
-            placedCount++
-        }
-    }
-
-    private fun placeNavigationItems() {
-        val navRow = getNavigationRow()
-
-        val prevSlot = navRow * 9
-        if (!isFixedItemSlot(prevSlot)) setMenuItem(1, navRow + 1, createPreviousPageItem())
-
-        val nextSlot = navRow * 9 + 8
-        if (!isFixedItemSlot(nextSlot)) setMenuItem(9, navRow + 1, createNextPageItem())
-    }
-
-    private fun placeFooter() {
-        if (getRows() < 3) return
-
-        val bottomRow = getRows() - 1
-        val grayPane = ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply {
-            itemMeta = itemMeta?.apply { setDisplayName(" ") }
-        }
-
-        for (col in 0 until 9) {
-            val slot = col
-            if (!isFixedItemSlot(slot)) inventory.setItem(slot, grayPane)
-        }
-
-        for (col in 0 until 9) {
-            val slot = bottomRow * 9 + col
-            if (!isFixedItemSlot(slot) && slot != bottomRow * 9 && slot != bottomRow * 9 + 8) {
-                inventory.setItem(slot, grayPane)
-            }
-        }
-
-        for (row in 1 until getRows() - 1) {
-            val left  = row * 9
-            val right = row * 9 + 8
-            placeGlassPaneIfNotFixed(left, grayPane)
-            placeGlassPaneIfNotFixed(right, grayPane)
-        }
-    }
-
-    private fun placeGlassPaneIfNotFixed(slot: Int, pane: ItemStack) {
-        if (!isFixedItemSlot(slot)) inventory.setItem(slot, pane)
-    }
-
-    private fun isFixedItemSlot(slot: Int): Boolean =
-        fixedItems[page]?.containsKey(slot) == true || fixedItems[-1]?.containsKey(slot) == true
-
-    fun createPreviousPageItem(): Item = object : Item() {
-        override fun createItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
-            itemMeta = itemMeta?.apply {
-                setDisplayName("Previous page".blue())
-                lore = mutableListOf(
-                    "Click to go to the previous page".gray(),
-                    "Current page: $page".gray()
-                )
-            }
-        }
-
-        override fun onClickEvent(clicker: Player, clickType: ClickType) {
-            previousPage()
-            clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
-        }
-    }
-
-    fun createNextPageItem(): Item = object : Item() {
-        override fun createItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
-            itemMeta = itemMeta?.apply {
-                setDisplayName("Next page".blue())
-                lore = mutableListOf(
-                    "Click to go to the next page".gray(),
-                    "Current page: $page".gray()
-                )
-            }
-        }
-
-        override fun onClickEvent(clicker: Player, clickType: ClickType) {
-            nextPage()
-            clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
-        }
-    }
-
-    fun addSearchItem(x: Int, y: Int) {
-        setGlobalMenuItem(x, y, object : Item() {
-            override fun createItem(): ItemStack = ItemStack(Material.OAK_SIGN).apply {
-                itemMeta = itemMeta?.apply {
-                    setDisplayName("Search".blue())
-                    lore = mutableListOf("Click to search items".white()).apply {
-                        if (searchQuery.isNotEmpty()) add("Current: $searchQuery".white())
-                    }
-                }
-            }
-
-            override fun onClickEvent(clicker: Player, clickType: ClickType) {
-                clicker.closeInventory()
-                ChatInputService.begin(clicker) { input ->
-                    searchQuery = input.trim().lowercase()
-                    page = 1
-                    applySearch()
-                    setMenuItems()
-                    open(clicker)
-                    if (::inventory.isInitialized) clicker.updateInventory()
-                }
-            }
-        })
-    }
-
-    fun addSearchItem(x: Int, y: Int, inputLore: List<String>) {
-        setGlobalMenuItem(x, y, object : Item() {
-            override fun createItem(): ItemStack = ItemStack(Material.OAK_SIGN).apply {
-                itemMeta = itemMeta?.apply {
-                    setDisplayName("Search".blue())
-                    val loreList = inputLore.toMutableList()
-                    if (searchQuery.isNotEmpty()) loreList.add("Current: $searchQuery".white())
-                    lore = loreList
-                }
-            }
-
-            override fun onClickEvent(clicker: Player, clickType: ClickType) {
-                clicker.closeInventory()
-                ChatInputService.begin(clicker) { input ->
-                    searchQuery = input.trim().lowercase()
-                    page = 1
-                    applySearch()
-                    setMenuItems()
-                    open(clicker)
-                    if (::inventory.isInitialized) clicker.updateInventory()
-                }
-            }
-        })
-    }
-
-    private fun applySearch() {
-        items.clear()
-        itemToObjectMap.clear()
-        val query = searchQuery.lowercase().trim()
-        val filtered = if (query.isEmpty()) originalItems else originalItems.filter { item ->
-            val name = ChatColor.stripColor(item.createItem().itemMeta?.displayName ?: item.createItem().type.name)
-            name!!.lowercase().contains(query)
-        }
-
-        filtered.forEach { item ->
-            val stack = item.createItem()
-            items.add(stack)
-            itemToObjectMap[stack] = item
-        }
-    }
-
-    fun refreshMenu(player: Player? = null) {
+    private fun render() {
         if (!::inventory.isInitialized) return
 
         inventory.clear()
-        paginatedItemMap.clear()
-        itemToObjectMap.clear()
-        items.clear()
+        slotMap.clear()
 
-        applySearch()
-        setMenuItems()
-
-        player?.updateInventory() ?: inventory.viewers.filterIsInstance<Player>().forEach { it.updateInventory() }
+        placeFixed()
+        placeItems()
+        placeNavigation()
+        if (footer) placeFooter()
     }
 
-    @EventHandler
-    fun onInventoryClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? Player ?: return
-        if (event.view.topInventory.holder != this) return
+    private fun placeFixed() {
+        fixedItems[-1]?.forEach { (slot, item) ->
+            inventory.setItem(slot, item.createItem())
+        }
 
-        val slot = event.rawSlot
-        val topSize = event.view.topInventory.size
+        fixedItems[page]?.forEach { (slot, item) ->
+            inventory.setItem(slot, item.createItem())
+        }
+    }
 
-        if (slot >= topSize) {
-            val clickedItem = event.currentItem
-            if (clickedItem != null && clickedItem.type != Material.AIR) {
-                event.isCancelled = true
-                onBottomInvClick(player, event.click, clickedItem, event)
-            } else {
-                if (!useInventory()) event.isCancelled = true
+    private fun placeItems() {
+        val start = (page - 1) * itemsPerPage()
+        val end = minOf(start + itemsPerPage(), filteredItems.size)
+
+        var slotIndex = 0
+
+        for (i in start until end) {
+            val item = filteredItems[i]
+            val slot = findNextFreeSlot(slotIndex++)
+
+            if (slot != -1) {
+                inventory.setItem(slot, item.createItem())
+                slotMap[slot] = item
             }
+        }
+    }
+
+    private fun findNextFreeSlot(start: Int): Int {
+        for (i in start until inventory.size) {
+            if (!isFixed(i) && inventory.getItem(i) == null) return i
+        }
+        return -1
+    }
+
+    private fun isFixed(slot: Int): Boolean {
+        return fixedItems[page]?.containsKey(slot) == true ||
+                fixedItems[-1]?.containsKey(slot) == true
+    }
+
+    private fun placeNavigation() {
+        val row = if (footer) getRows() - 2 else getRows() - 1
+
+        inventory.setItem(row * 9, createPrev())
+        inventory.setItem(row * 9 + 8, createNext())
+    }
+
+    private fun placeFooter() {
+        val pane = ItemStack(Material.GRAY_STAINED_GLASS_PANE)
+
+        for (i in 0 until inventory.size) {
+            if (inventory.getItem(i) == null) {
+                inventory.setItem(i, pane)
+            }
+        }
+    }
+
+    private fun createPrev(): ItemStack {
+        return ItemStack(Material.RED_CARPET).apply {
+            itemMeta = itemMeta?.apply { setDisplayName("Previous".red()) }
+        }
+    }
+
+    private fun createNext(): ItemStack {
+        return ItemStack(Material.LIME_CARPET).apply {
+            itemMeta = itemMeta?.apply { setDisplayName("Next".red()) }
+        }
+    }
+
+    private fun handleSpam(slot: Int, player: Player): Boolean {
+        val map = clickHistory.computeIfAbsent(slot) { mutableMapOf() }
+        val list = map.computeIfAbsent(player.uniqueId) { mutableListOf() }
+
+        val now = System.currentTimeMillis()
+
+        list.removeIf { it < now - SPAM_WINDOW }
+        list.add(now)
+
+        return list.size > SPAM_MAX
+    }
+
+    fun applySearch() {
+        val query = searchQuery.lowercase().trim()
+
+        filteredItems.clear()
+
+        if (query.isEmpty()) {
+            filteredItems.addAll(sourceItems)
+            page = 1
             return
         }
 
-        val clickedItem = event.currentItem ?: return
-        if (clickedItem.type == Material.AIR) return
-        if (clickedItem.type.name.contains("GLASS_PANE") && clickedItem.itemMeta?.displayName == " ") {
-            event.isCancelled = true; return
-        }
+        filteredItems.addAll(
+            sourceItems.filter { item ->
+                val stack = item.createItem()
+                val name = stack.itemMeta?.displayName ?: return@filter false
 
-        val menuItem = fixedItems[page]?.get(slot)
-            ?: fixedItems[-1]?.get(slot)
-            ?: paginatedItemMap[slot]
-
-        menuItem?.let { item ->
-            if (item.spamCooldown()) {
-                val playerClicks: MutableList<Long> = slotClickTimestamps
-                    .computeIfAbsent(slot) { mutableMapOf() }
-                    .computeIfAbsent(player.uniqueId) { mutableListOf<Long>() }
-
-                val now = System.currentTimeMillis()
-                playerClicks.removeIf { it < now - SPAM_TIME_WINDOW_MS }
-                playerClicks.add(now)
-
-                if (playerClicks.size > SPAM_MAX_CLICKS) {
-                    player.sendMessage("You're clicking too fast! Please wait a moment.".red())
-                    event.isCancelled = true
-                    return
-                }
+                name.lowercase().contains(query)
             }
+        )
 
-            shouldReopen = false
-            item.onClickEvent(player, event.click)
-        }
-
-        onInventoryClickEvent(player, event.click, event)
-
-        event.isCancelled = cancelClicks()
-        player.playSound(player.location, clickSound(), 0.5f, 1.0f)
-        if (autoRefreshOnClick) refreshMenu(player)
+        page = 1
     }
 
-    override fun getInventory(): Inventory = inventory
+    @EventHandler
+    fun onClick(event: InventoryClickEvent) {
+        val player = event.whoClicked as? Player ?: return
+        if (event.inventory.holder != this) return
+
+        val slot = event.rawSlot
+
+        if (slot >= inventory.size) {
+            if (!useInventory) event.isCancelled = true
+            return
+        }
+
+        val item = slotMap[slot] ?: return
+
+        if (handleSpam(slot, player)) {
+            player.sendMessage("You're clicking too fast!".red())
+            event.isCancelled = true
+            return
+        }
+
+        shouldReopen = false
+
+        onInventoryClick(player, event.click, event)
+
+        item.onClickEvent(player, event.click)
+
+        if (cancelClicks) event.isCancelled = true
+
+        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.5f, 1f)
+
+        if (autoRefreshOnClick) render()
+    }
+
+    @EventHandler
+    fun onClose(event: InventoryCloseEvent) {
+        val player = event.player as? Player ?: return
+        if (event.inventory.holder != this) return
+
+        if (shouldReopen) {
+            Tasks.run {
+                open(player)
+            }
+        }
+
+        onClose(player)
+        refreshTask?.cancel()
+    }
 }

@@ -41,6 +41,7 @@ object CC {
     }
 
 
+    // General Colors
     fun String.white() = "&#E2E2E2$this".translate()
     fun String.blue() = "&#1D91FF$this".translate()
     fun String.orange() = "&#FF5733$this".translate()
@@ -58,6 +59,13 @@ object CC {
     fun String.darkBlue() = "&#000B64$this".translate()
     fun String.darkAqua() = "&#004840$this".translate()
     fun String.darkPurple() = "&#33007A$this".translate()
+
+    // Command Colors
+    fun String.accent() = "&#4DA3FF$this".translate()
+    fun String.accentDark() = "&#2B6EDB$this".translate()
+    fun String.warning() = "&#FFB84D$this".translate()
+    fun String.error() = "&#FF5C5C$this".translate()
+    fun String.success() = "&#4DFF88$this".translate()
 
     fun String.bold() = "&l".translate()
 }

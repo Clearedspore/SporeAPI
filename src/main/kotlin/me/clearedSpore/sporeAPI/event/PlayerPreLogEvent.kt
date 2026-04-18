@@ -6,6 +6,10 @@ import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
+
 
 class PlayerPreLogEvent(
     val sender: CommandSender,

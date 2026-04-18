@@ -1,11 +1,9 @@
-package me.clearedSpore.sporeAPI.util
+package me.clearedSpore.sporeAPI.util.time
 
 import java.util.concurrent.TimeUnit
-import kotlin.math.floor
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
-
 
 object TimeUtil {
 
@@ -13,24 +11,23 @@ object TimeUtil {
 
     enum class TimeUnitStyle { SHORT, LONG, COMPACT, MINIMAL }
 
-    /**
-     * Parses a duration string like "1h30m", "2d", "45s" into milliseconds.
-     * Returns 0 for invalid formats.
-     */
-    fun parseDuration(input: String): Long {
+    fun parse(input: String): Duration {
         var total = 0L
+
         timeRegex.findAll(input).forEach { match ->
             val (amountStr, unit) = match.destructured
             val amount = amountStr.toLongOrNull() ?: return@forEach
+
             total += when (unit.lowercase()) {
-                "s" -> TimeUnit.SECONDS.toMillis(amount)
-                "m" -> TimeUnit.MINUTES.toMillis(amount)
-                "h" -> TimeUnit.HOURS.toMillis(amount)
-                "d" -> TimeUnit.DAYS.toMillis(amount)
+                "s" -> amount * 1000
+                "m" -> amount * 60_000
+                "h" -> amount * 3_600_000
+                "d" -> amount * 86_400_000
                 else -> 0L
             }
         }
-        return total
+
+        return Duration(total)
     }
 
     /**
@@ -50,13 +47,17 @@ object TimeUtil {
         separator: String = " "
     ): String {
         var remaining = durationMs
-        val days = TimeUnit.MILLISECONDS.toDays(remaining)
-        remaining -= TimeUnit.DAYS.toMillis(days)
-        val hours = TimeUnit.MILLISECONDS.toHours(remaining)
-        remaining -= TimeUnit.HOURS.toMillis(hours)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(remaining)
-        remaining -= TimeUnit.MINUTES.toMillis(minutes)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(remaining)
+
+        val days = remaining / 86_400_000
+        remaining %= 86_400_000
+
+        val hours = remaining / 3_600_000
+        remaining %= 3_600_000
+
+        val minutes = remaining / 60_000
+        remaining %= 60_000
+
+        val seconds = remaining / 1000
 
         val units = listOf(
             "d" to days,
@@ -65,15 +66,12 @@ object TimeUtil {
             "s" to seconds
         )
 
-        val builder = mutableListOf<String>()
-        for ((unit, value) in units) {
-            if (value > 0 || showZero) {
-                builder.add(formatUnit(value, unit, style))
-            }
-        }
+        val parts = units
+            .filter { it.second > 0 || showZero }
+            .map { formatUnit(it.second, it.first, style) }
 
-        return if (builder.isEmpty()) formatUnit(0, "s", style)
-        else builder.take(maxUnits).joinToString(separator)
+        return if (parts.isEmpty()) formatUnit(0, "s", style)
+        else parts.take(maxUnits).joinToString(separator)
     }
 
     private fun formatUnit(value: Long, unit: String, style: TimeUnitStyle): String {
@@ -97,10 +95,16 @@ object TimeUtil {
     /**
      * Converts a duration in milliseconds into a total in seconds/minutes/etc.
      */
-    fun toSeconds(durationMs: Long) = TimeUnit.MILLISECONDS.toSeconds(durationMs)
-    fun toMinutes(durationMs: Long) = TimeUnit.MILLISECONDS.toMinutes(durationMs)
-    fun toHours(durationMs: Long) = TimeUnit.MILLISECONDS.toHours(durationMs)
-    fun toDays(durationMs: Long) = TimeUnit.MILLISECONDS.toDays(durationMs)
+    fun seconds(value: Long) = Duration(value * 1000)
+    fun minutes(value: Long) = Duration(value * 60_000)
+    fun hours(value: Long) = Duration(value * 3_600_000)
+    fun days(value: Long) = Duration(value * 86_400_000)
+
+    val Int.seconds get() = Duration(this * 1000L)
+    val Int.minutes get() = Duration(this * 60_000L)
+    val Int.hours get() = Duration(this * 3_600_000L)
+    val Int.days get() = Duration(this * 86_400_000L)
+    fun now() = System.currentTimeMillis()
 
     /**
      * Adds two durations in milliseconds.
