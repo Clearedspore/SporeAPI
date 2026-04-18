@@ -20,7 +20,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT")
     implementation(kotlin("stdlib"))
     implementation("org.json:json:20250517")
-    implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
+    compileOnly("co.aikar:acf-paper:0.5.1-SNAPSHOT")
     implementation("org.reflections:reflections:0.10.2")
 }
 
