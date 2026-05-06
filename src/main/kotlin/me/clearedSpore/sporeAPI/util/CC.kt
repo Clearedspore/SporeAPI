@@ -1,12 +1,14 @@
 package me.clearedSpore.sporeAPI.util
 
 
-
-
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.minimessage.tag.Tag
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.md_5.bungee.api.ChatColor
-import net.kyori.adventure.text.Component
 import java.util.regex.Pattern
 
 // Copyright (c) 2025 ClearedSpore
@@ -15,7 +17,16 @@ import java.util.regex.Pattern
 object CC {
 
     private val HEX_PATTERN: Pattern = Pattern.compile("(?<!\\\\)(?:\\\\\\\\)*&#[a-fA-F0-9]{6}")
-    private val miniMessage = MiniMessage.miniMessage()
+    private val miniMessage = MiniMessage.builder()
+        .tags(
+            TagResolver.builder()
+                .resolver(StandardTags.defaults())
+                .tag("s_blue", Tag.styling(TextColor.fromHexString("#1D91FF")!!))
+                .tag("s_red", Tag.styling(TextColor.fromHexString("#F50000")!!))
+                .build()
+        )
+        .build()
+
     private val legacySerializer = LegacyComponentSerializer.legacySection()
 
     fun String.translate(): String {
