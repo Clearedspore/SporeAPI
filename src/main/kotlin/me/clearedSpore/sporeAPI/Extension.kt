@@ -62,6 +62,34 @@ object Extension {
         Cooldown.removeCooldown(id, this.uuid)
     }
 
+    fun CommandSender.cooldown(
+        id: String,
+        action: (remainingSeconds: Long) -> Unit
+    ): Boolean {
+        val uuid = this.uuid
+
+        val remaining = Cooldown.getTimeLeft(id, uuid)
+
+        if (remaining > 0) {
+            action(remaining / 1000)
+            return false
+        }
+
+        return true
+    }
+
+    fun CommandSender.withCooldown(id: String, seconds: Long): Boolean {
+        val uuid = this.uuid
+
+        if (Cooldown.isOnCooldown(id, uuid)) {
+            return false
+        }
+
+        Cooldown.createCooldown(id, seconds)
+        Cooldown.addCooldown(id, uuid)
+        return true
+    }
+
     fun String.niceName(): String {
         val string = this
         val words = string.replace("_", " ").lowercase(Locale.getDefault()).split(" ")
