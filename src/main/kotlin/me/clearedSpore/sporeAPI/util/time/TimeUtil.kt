@@ -106,6 +106,8 @@ object TimeUtil {
     val Int.days get() = Duration(this * 86_400_000L)
     fun now() = System.currentTimeMillis()
 
+    fun Duration.toTicks() = millis / 50
+
     /**
      * Adds two durations in milliseconds.
      */
