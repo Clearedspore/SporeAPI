@@ -1,5 +1,8 @@
 package me.clearedSpore.sporeAPI
 
+import co.aikar.commands.Locales
+import co.aikar.commands.MessageKeys
+import co.aikar.commands.PaperCommandManager
 import me.clearedSpore.sporeAPI.annotation.RegisterCommand
 import me.clearedSpore.sporeAPI.annotation.RegisterListener
 import me.clearedSpore.sporeAPI.bossbar.BossBarManager
@@ -7,10 +10,16 @@ import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
 import me.clearedSpore.sporeAPI.serialization.SporeSerialization
 import me.clearedSpore.sporeAPI.task.SporeScheduler
+import me.clearedSpore.sporeAPI.task.TaskBuilder
+import me.clearedSpore.sporeAPI.util.CC.accent
 import me.clearedSpore.sporeAPI.util.CC.accentDark
+import me.clearedSpore.sporeAPI.util.CC.error
+import me.clearedSpore.sporeAPI.util.CC.translate
+import me.clearedSpore.sporeAPI.util.CC.white
 import me.clearedSpore.sporeAPI.util.Logger
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.ActionBar
+import me.clearedSpore.sporeAPI.util.Cooldown
 import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -24,7 +33,7 @@ open class SporePlugin : JavaPlugin() {
 
     val commandManager by lazy {
         SporeCommandManager(this).also {
-            setupCommands(it)
+            setupACF(it)
         }
     }
 
@@ -45,7 +54,26 @@ open class SporePlugin : JavaPlugin() {
         Logger.info("Registered module ${module.javaClass.simpleName}")
     }
 
-    protected open fun setupCommands(manager: SporeCommandManager) {
+    protected open fun setupACF(manager: PaperCommandManager) {
+        setupLocales(manager)
+    }
+
+    private fun setupLocales(manager: PaperCommandManager) {
+        val locales = manager.locales
+
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_HEADER, "$prefix &fAvailable Commands:")
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_FORMAT, "/{command}".accent() + " {parameters}".error() + " - {description}".white())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_PAGE_INFORMATION, "Page &f{page} ".accent() + "out of &f{totalpages}".accent() + " pages".accent())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_NO_RESULTS, "No results were found!".error())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_SEARCH_HEADER, "Results for &f{search}".accent())
+
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_DETAILED_HEADER, prefix + " Command Help for &e/{command}".white())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_DETAILED_COMMAND_FORMAT, "Usage: &f/{command}".accent() + " {parameters}".error())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.HELP_DETAILED_PARAMETER_FORMAT, "&7- &f{parameter} &7- &f{description}".translate())
+
+        locales.addMessage(Locales.ENGLISH, MessageKeys.INVALID_SYNTAX, prefix + " Use &e{command} ".error() + "{syntax}".error())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.PERMISSION_DENIED, prefix + "You don't have permission to use this command!".error())
+        locales.addMessage(Locales.ENGLISH, MessageKeys.UNKNOWN_COMMAND, prefix + "That command does not exist!".error())
     }
 
     final override fun onLoad() {
@@ -147,7 +175,7 @@ open class SporePlugin : JavaPlugin() {
         classes.forEach { clazz ->
             try {
                 if (!SporeCommand::class.java.isAssignableFrom(clazz)) {
-                    Logger.warn("Class ${clazz.simpleName} is annotated with @RegisterCommand but does not extend SporeCommand")
+                    Logger.warn("Class ${clazz.simpleName} is annotated with @RegisterCommand but does not extend BaseCommand")
                     return@forEach
                 }
 
@@ -194,5 +222,3 @@ open class SporePlugin : JavaPlugin() {
     open fun onPluginEnable() {}
     open fun onPluginDisable() {}
 }
-
-
