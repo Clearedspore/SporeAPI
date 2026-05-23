@@ -35,8 +35,8 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     private var autoRefreshTask: BukkitRunnable? = null
     private var autoRefreshEnabled = true
 
-    private val SPAM_MAX = 3
-    private val SPAM_WINDOW = 2000L
+    open val SPAM_MAX = 3
+    open val SPAM_WINDOW = 2000L
 
     private val clickLog = ConcurrentHashMap<Int, ConcurrentHashMap<UUID, MutableList<Long>>>()
 

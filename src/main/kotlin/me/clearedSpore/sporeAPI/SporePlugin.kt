@@ -23,7 +23,9 @@ import me.clearedSpore.sporeAPI.util.Cooldown
 import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.plugin.java.JavaPlugin
 import org.reflections.Reflections
+import org.reflections.scanners.Scanners
 import org.reflections.util.ConfigurationBuilder
+import org.reflections.util.FilterBuilder
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -44,7 +46,9 @@ open class SporePlugin : JavaPlugin() {
     private val reflections by lazy {
         Reflections(
             ConfigurationBuilder()
+                .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes)
                 .forPackage(scanPackage, this.javaClass.classLoader)
+                .filterInputsBy(FilterBuilder().includePackage(scanPackage))
         )
     }
 
@@ -178,6 +182,8 @@ open class SporePlugin : JavaPlugin() {
     private fun scanAndRegisterCommands() {
         val classes = reflections.getTypesAnnotatedWith(RegisterCommand::class.java)
         var count = 0
+        Logger.info("Command scan package: $scanPackage")
+        Logger.info("Annotated command classes found: ${classes.size}")
 
         classes.forEach { clazz ->
             try {
@@ -186,7 +192,8 @@ open class SporePlugin : JavaPlugin() {
                     return@forEach
                 }
 
-                val instance = clazz.getDeclaredConstructor().newInstance() as SporeCommand
+                val instance = ((clazz.kotlin.objectInstance)
+                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as SporeCommand
 
                 commandManager.registerCommand(instance)
                 count++
@@ -211,7 +218,8 @@ open class SporePlugin : JavaPlugin() {
                     return@forEach
                 }
 
-                val instance = clazz.getDeclaredConstructor().newInstance() as org.bukkit.event.Listener
+                val instance = ((clazz.kotlin.objectInstance)
+                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as org.bukkit.event.Listener
 
                 server.pluginManager.registerEvents(instance, this)
                 count++
