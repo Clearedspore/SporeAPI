@@ -23,6 +23,7 @@ import me.clearedSpore.sporeAPI.util.Cooldown
 import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.plugin.java.JavaPlugin
 import org.reflections.Reflections
+import org.reflections.util.ConfigurationBuilder
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -38,8 +39,13 @@ open class SporePlugin : JavaPlugin() {
         }
     }
 
+    open val scanPackage: String = this.javaClass.`package`.name
+
     private val reflections by lazy {
-        Reflections(this.javaClass.`package`.name)
+        Reflections(
+            ConfigurationBuilder()
+                .forPackage(scanPackage, this.javaClass.classLoader)
+        )
     }
 
     private val modules = mutableListOf<SporeModule>()
