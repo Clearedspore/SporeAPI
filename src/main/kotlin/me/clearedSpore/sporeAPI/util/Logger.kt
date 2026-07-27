@@ -22,14 +22,14 @@ object Logger {
         this.developerNotice = developerNotice
     }
 
-    fun log(sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
+    fun log(playerSuffix: String, sender: CommandSender, permission: String, message: String, includeSender: Boolean = true) {
         Bukkit.getOnlinePlayers()
             .filter { it.hasPermission(permission) && (includeSender || it != sender) }
             .forEach { player ->
                 val event = PlayerPreLogEvent(player, permission, message, includeSender)
                 Bukkit.getPluginManager().callEvent(event)
                 if (!event.isCancelled) {
-                    player.sendMessage("$prefix&f${sender.name} has ${event.message}".blue())
+                    player.sendMessage("$prefix&f${playerSuffix}${sender.name} has ${event.message}".blue())
                 }
             }
     }
