@@ -29,7 +29,7 @@ object Logger {
                 val event = PlayerPreLogEvent(player, permission, message, includeSender)
                 Bukkit.getPluginManager().callEvent(event)
                 if (!event.isCancelled) {
-                    player.sendMessage("$prefix&f${playerSuffix}${sender.name} has ${event.message}".blue())
+                    player.sendMessage("$prefix&f${playerSuffix}${sender.name}&r has ${event.message}".blue())
                 }
             }
     }
