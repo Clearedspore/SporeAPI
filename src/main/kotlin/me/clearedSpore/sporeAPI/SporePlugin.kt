@@ -192,7 +192,7 @@ open class SporePlugin : JavaPlugin() {
                     return@forEach
                 }
 
-                val instance = ((clazz.kotlin.objectInstance)
+                val instance = (kotlinObjectInstanceOrNull(clazz)
                     ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as SporeCommand
 
                 commandManager.registerCommand(instance)
@@ -218,7 +218,7 @@ open class SporePlugin : JavaPlugin() {
                     return@forEach
                 }
 
-                val instance = ((clazz.kotlin.objectInstance)
+                val instance = (kotlinObjectInstanceOrNull(clazz)
                     ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as org.bukkit.event.Listener
 
                 server.pluginManager.registerEvents(instance, this)
@@ -231,6 +231,18 @@ open class SporePlugin : JavaPlugin() {
         }
 
         Logger.info("Auto-registered $count listener(s)")
+    }
+
+    private fun kotlinObjectInstanceOrNull(clazz: Class<*>): Any? {
+        return try {
+            val field = clazz.getDeclaredField("INSTANCE")
+            if (java.lang.reflect.Modifier.isStatic(field.modifiers) && clazz.isAssignableFrom(field.type)) {
+                field.isAccessible = true
+                field.get(null)
+            } else null
+        } catch (e: NoSuchFieldException) {
+            null
+        }
     }
 
     open fun onPluginLoad() {}
