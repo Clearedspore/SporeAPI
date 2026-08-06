@@ -246,27 +246,27 @@ abstract class BasePaginatedMenu(
     fun createPreviousPageItem(): Item = object : Item() {
         override fun createItem(): ItemStack = ItemStack(Material.RED_CARPET).apply {
             itemMeta = itemMeta?.apply {
-                setDisplayName("Previous page".blue())
+                setDisplayName("Previous Page".blue())
                 lore = mutableListOf(
                     "Click to go to the previous page".gray(),
-                    "Current page: $page".gray()
+                    "Current Page: $page".gray()
                 )
             }
         }
 
         override fun onClickEvent(clicker: Player, clickType: ClickType) {
             previousPage()
-            clicker.playSound(clicker.location, Sound.UI_BUTTON_CLICK, 0.5f, 1.0f)
+            clicker.playSound(clicker.location, Sound.ITEM_BOOK_PAGE_TURN, 1f, 1.0f)
         }
     }
 
     fun createNextPageItem(): Item = object : Item() {
         override fun createItem(): ItemStack = ItemStack(Material.LIME_CARPET).apply {
             itemMeta = itemMeta?.apply {
-                setDisplayName("Next page".blue())
+                setDisplayName("Next Page".blue())
                 lore = mutableListOf(
                     "Click to go to the next page".gray(),
-                    "Current page: $page".gray()
+                    "Current Page: $page".gray()
                 )
             }
         }
