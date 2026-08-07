@@ -15,6 +15,7 @@ import java.util.regex.Pattern
 
 object CC {
 
+    private val LEGACY_CHAR: Char = LegacyComponentSerializer.SECTION_CHAR
     private val HEX_PATTERN: Pattern = Pattern.compile("(?<!\\\\)(?:\\\\\\\\)*&#[a-fA-F0-9]{6}")
     private val miniMessage = MiniMessage.builder()
         .tags(
@@ -67,8 +68,26 @@ object CC {
         var i = 0
         while (i < input.length) {
             val c = input[i]
-            if (c == '&' && i + 1 < input.length) {
-                val tag = LEGACY_TAGS[input[i + 1].lowercaseChar()]
+            if ((c == '&' || c == LEGACY_CHAR) && i + 1 < input.length) {
+                val next = input[i + 1]
+
+                if (next.lowercaseChar() == 'x') {
+                    val hexEnd = matchExplodedHex(input, i + 2)
+                    if (hexEnd != null) {
+                        val hex = buildString {
+                            var j = i + 2
+                            repeat(6) {
+                                append(input[j + 1])
+                                j += 2
+                            }
+                        }
+                        builder.append("<#").append(hex).append('>')
+                        i = hexEnd
+                        continue
+                    }
+                }
+
+                val tag = LEGACY_TAGS[next.lowercaseChar()]
                 if (tag != null) {
                     builder.append('<').append(tag).append('>')
                     i += 2
@@ -80,6 +99,19 @@ object CC {
         }
         return builder.toString()
     }
+
+    private fun matchExplodedHex(input: String, start: Int): Int? {
+        var j = start
+        repeat(6) {
+            if (j + 1 >= input.length) return null
+            if (input[j] != '&' && input[j] != LEGACY_CHAR) return null
+            if (!input[j + 1].isHexDigit()) return null
+            j += 2
+        }
+        return j
+    }
+
+    private fun Char.isHexDigit() = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
 
 
     // General Colors
