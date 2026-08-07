@@ -8,7 +8,6 @@ import net.kyori.adventure.text.minimessage.tag.Tag
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import net.kyori.adventure.text.minimessage.tag.standard.StandardTags
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-import net.md_5.bungee.api.ChatColor
 import java.util.regex.Pattern
 
 // Copyright (c) 2025 ClearedSpore
@@ -27,7 +26,19 @@ object CC {
         )
         .build()
 
-    private val legacySerializer = LegacyComponentSerializer.legacySection()
+    private val legacySerializer = LegacyComponentSerializer.builder()
+        .character(LegacyComponentSerializer.SECTION_CHAR)
+        .hexColors()
+        .useUnusualXRepeatedCharacterHexFormat()
+        .build()
+
+    private val LEGACY_TAGS: Map<Char, String> = mapOf(
+        '0' to "black", '1' to "dark_blue", '2' to "dark_green", '3' to "dark_aqua",
+        '4' to "dark_red", '5' to "dark_purple", '6' to "gold", '7' to "gray",
+        '8' to "dark_gray", '9' to "blue", 'a' to "green", 'b' to "aqua",
+        'c' to "red", 'd' to "light_purple", 'e' to "yellow", 'f' to "white",
+        'k' to "obfuscated", 'l' to "bold", 'm' to "strikethrough", 'n' to "underlined", 'o' to "italic", 'r' to "reset"
+    )
 
     fun String.translate(): String {
         var message = this
@@ -37,11 +48,11 @@ object CC {
 
         val matcher = HEX_PATTERN.matcher(message)
         while (matcher.find()) {
-            val hexCode = matcher.group().substring(1)
-            message = message.replace(matcher.group(), ChatColor.of(hexCode).toString())
+            val hex = matcher.group().takeLast(6)
+            message = message.replace(matcher.group(), "<#$hex>")
         }
 
-        message = ChatColor.translateAlternateColorCodes('&', message)
+        message = translateLegacyCodes(message)
 
         return try {
             val component: Component = miniMessage.deserialize(message)
@@ -49,6 +60,25 @@ object CC {
         } catch (ex: Exception) {
             message
         }
+    }
+
+    private fun translateLegacyCodes(input: String): String {
+        val builder = StringBuilder(input.length)
+        var i = 0
+        while (i < input.length) {
+            val c = input[i]
+            if (c == '&' && i + 1 < input.length) {
+                val tag = LEGACY_TAGS[input[i + 1].lowercaseChar()]
+                if (tag != null) {
+                    builder.append('<').append(tag).append('>')
+                    i += 2
+                    continue
+                }
+            }
+            builder.append(c)
+            i++
+        }
+        return builder.toString()
     }
 
 
