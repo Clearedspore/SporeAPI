@@ -92,6 +92,8 @@ open class SporePlugin : JavaPlugin() {
         setupLocales(manager)
     }
 
+    protected open fun setupCloud(manager: SporeCloudCommandManager) {}
+
     private fun setupLocales(manager: PaperCommandManager) {
         val locales = manager.locales
 
@@ -133,6 +135,7 @@ open class SporePlugin : JavaPlugin() {
         SporeSerialization.init()
         ItemBuilder.init(this)
         commandManager
+        setupCloud(cloudCommandManager)
 
         Logger.info("Scanning for commands...")
         scanAndRegisterCommands()
