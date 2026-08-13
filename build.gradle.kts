@@ -5,8 +5,8 @@ plugins {
     `maven-publish`
 }
 
-group = "me.clearedSpore"
-version = "1.0-SNAPSHOT"
+group = "eu.sporedev"
+version = "1.1"
 
 
 repositories {
@@ -44,5 +44,25 @@ kotlin {
     jvmToolchain(25)
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_25)
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "sporeRepository"
+            url = uri("https://repo.sporedev.eu/repository/sporeapi-releases/")
+
+            credentials {
+                username = System.getenv("NEXUS_USERNAME")
+                password = System.getenv("NEXUS_PASSWORD")
+            }
+        }
+    }
+
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+        }
     }
 }
