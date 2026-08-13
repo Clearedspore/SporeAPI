@@ -8,6 +8,7 @@ import org.bukkit.Sound
 import xyz.xenondevs.invui.gui.Markers
 import xyz.xenondevs.invui.gui.Structure
 import xyz.xenondevs.invui.item.BoundItem
+import java.util.function.Supplier
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -32,26 +33,43 @@ object SporeMenuDefaults {
         .build()
 
     fun register() {
-
-        val backButton = BoundItem.pagedBuilder()
-            .setItemProvider(BACK_ITEM)
-            .addClickHandler { _, gui, player ->
-                player.player.playSound(player.player(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.0f)
-                gui.page--
-            }
-            .build()
-
-        val nextButton = BoundItem.pagedBuilder()
-            .setItemProvider(NEXT_ITEM)
-            .addClickHandler { _, gui, player ->
-                player.player.playSound(player.player(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 1.0f)
-                gui.page++
-            }
-            .build()
-
         Structure.addGlobalIngredient('x', Markers.CONTENT_LIST_SLOT_HORIZONTAL)
         Structure.addGlobalIngredient('#', FILLER_ITEM)
-        Structure.addGlobalIngredient('<', backButton)
-        Structure.addGlobalIngredient('>', nextButton)
+
+        Structure.addGlobalIngredient(
+            '<',
+            Supplier {
+                BoundItem.pagedBuilder()
+                    .setItemProvider(BACK_ITEM)
+                    .addClickHandler { _, gui, player ->
+                        player.player.playSound(
+                            player.player(),
+                            Sound.ITEM_BOOK_PAGE_TURN,
+                            1.0f,
+                            1.0f
+                        )
+                        gui.page--
+                    }
+                    .build()
+            }
+        )
+
+        Structure.addGlobalIngredient(
+            '>',
+            Supplier {
+                BoundItem.pagedBuilder()
+                    .setItemProvider(NEXT_ITEM)
+                    .addClickHandler { _, gui, player ->
+                        player.player.playSound(
+                            player.player(),
+                            Sound.ITEM_BOOK_PAGE_TURN,
+                            1.0f,
+                            1.0f
+                        )
+                        gui.page++
+                    }
+                    .build()
+            }
+        )
     }
 }
