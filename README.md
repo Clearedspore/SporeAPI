@@ -36,7 +36,7 @@ Replace the version with the latest API version.
 
 ![Latest Version](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
  
-You can find the repository and dependency [here]("https://repo.sporedev.eu/#/releases/eu/sporedev")
+You can find the repository and dependency [here](https://repo.sporedev.eu/#/releases/eu/sporedev)
 
 ---
 
