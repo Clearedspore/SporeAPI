@@ -26,8 +26,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Publish
+      - name: Publish with Gradle
+        run: ./gradlew build publish
         env:
-          REPOSILITE_USERNAME: ${{ secrets.REPOSILITE_USERNAME }}
-          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
-        run: ./gradlew publish
+          MAVEN_NAME: ${{ secrets.MAVEN_NAME }}
+          MAVEN_SECRET: ${{ secrets.MAVEN_SECRET }}

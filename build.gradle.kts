@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "7.7"
+version = "7.8-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -59,8 +59,8 @@ publishing {
             )
 
             credentials {
-                username = System.getenv("REPOSILITE_USERNAME")
-                password = System.getenv("REPOSILITE_TOKEN")
+                username = System.getenv("MAVEN_NAME")
+                password = System.getenv("MAVEN_SECRET")
             }
         }
     }
