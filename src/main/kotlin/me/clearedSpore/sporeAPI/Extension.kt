@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI
 
 import me.clearedSpore.sporeAPI.util.CC.blue
+import me.clearedSpore.sporeAPI.util.CC.mm
 import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.Cooldown
 import me.clearedSpore.sporeAPI.util.Logger
@@ -17,27 +18,8 @@ object Extension {
 
     private val CONSOLE_UUID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 
-    fun CommandSender.success(message: String) {
-        val prefix = Logger.pluginName
-        val finalMessage = if (this is Player) {
-            "$prefix » ✔ | $message".blue()
-        } else {
-            "✔ | $message".blue()
-        }
-
-        sendMessage(finalMessage)
-    }
-
-    fun CommandSender.error(message: String) {
-        val prefix = Logger.pluginName
-        val finalMessage = if (this is Player) {
-            "$prefix » ✖ | $message".red()
-        } else {
-            "✖ | $message".red()
-        }
-
-        sendMessage(finalMessage)
-    }
+    fun CommandSender.success(message: String) = sendMessage("<s_blue>✔ | <white>$message".mm())
+    fun CommandSender.error(message: String)  = sendMessage("<s_red>✖ | <white>$message".mm())
 
     val CommandSender.uuid: UUID
         get() = if (this is Player) uniqueId else CONSOLE_UUID
