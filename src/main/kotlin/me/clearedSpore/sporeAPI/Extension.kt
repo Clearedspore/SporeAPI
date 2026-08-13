@@ -18,8 +18,8 @@ object Extension {
 
     private val CONSOLE_UUID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 
-    fun CommandSender.success(message: String) = sendMessage("<s_blue>✔ | <white>$message".mm())
-    fun CommandSender.error(message: String)  = sendMessage("<s_red>✖ | <white>$message".mm())
+    fun CommandSender.success(message: String) = sendMessage("<s_blue>✔ | $message".mm())
+    fun CommandSender.error(message: String)  = sendMessage("<s_red>✖ | $message".mm())
 
     val CommandSender.uuid: UUID
         get() = if (this is Player) uniqueId else CONSOLE_UUID
