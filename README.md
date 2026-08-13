@@ -35,58 +35,8 @@ You can include **SporeAPI** in your project either via **Gradle** or **Maven**.
 Replace the version with the latest API version.
 
 ![Latest Version](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
-
-## Maven
-
-#### Repository
-```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
-```
-#### Dependency
-```xml
-<dependency>
-    <groupId>com.github.Clearedspore</groupId>
-    <artifactId>SporeAPI</artifactId>
-    <version>VERSION</version>
-</dependency>
-```
-
-## Gradle
-
-### Groovy
-#### Repository
-```groovy
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
-```
-#### Dependency
-```groovy
-dependencies {
-    implementation 'com.github.Clearedspore:SporeAPI:VERSION'
-}
-```
-
-### Kotlin
-#### Repository
-```kotlin
-repositories {
-    mavenCentral()
-    maven { url = uri("https://jitpack.io") }
-}
-```
-#### Dependency
-```kotlin
-dependencies {
-    implementation("com.github.Clearedspore:SporeAPI:VERSION")
-}
-```
+ 
+You can find the repository and dependency [here]("https://repo.sporedev.eu/#/releases/eu/sporedev")
 
 ---
 
