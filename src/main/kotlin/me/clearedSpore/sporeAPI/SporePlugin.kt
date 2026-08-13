@@ -28,6 +28,7 @@ import org.reflections.Reflections
 import org.reflections.scanners.Scanners
 import org.reflections.util.ConfigurationBuilder
 import org.reflections.util.FilterBuilder
+import org.reflections.vfs.Vfs
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -50,15 +51,32 @@ open class SporePlugin : JavaPlugin() {
     open val scanPackage: String = this.javaClass.`package`.name
 
     private val reflections by lazy {
-        val jarUrl = this.file.toURI().toURL()
+        val jarFile = this.file
+        val jarUrl = jarFile.toURI().toURL()
 
-        Reflections(
+        Logger.info("Scanning jar: $jarUrl")
+        Logger.info("Jar exists: ${jarFile.exists()}, length: ${jarFile.length()}")
+
+        Vfs.addDefaultURLTypes(object : Vfs.UrlType {
+            override fun matches(url: java.net.URL): Boolean {
+                return url.protocol == "file" && url.toExternalForm().endsWith(".jar")
+            }
+            override fun createDir(url: java.net.URL): Vfs.Dir {
+                return Vfs.DefaultUrlTypes.jarFile.createDir(url)
+            }
+        })
+
+        val instance = Reflections(
             ConfigurationBuilder()
                 .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes)
                 .setUrls(jarUrl)
                 .addClassLoaders(this.javaClass.classLoader)
-                .filterInputsBy(FilterBuilder().includePackage(scanPackage))
         )
+
+        Logger.info("SubTypes store size: ${instance.store.get(Scanners.SubTypes.index())?.size}")
+        Logger.info("TypesAnnotated store size: ${instance.store.get(Scanners.TypesAnnotated.index())?.size}")
+
+        instance
     }
 
     private val modules = mutableListOf<SporeModule>()
