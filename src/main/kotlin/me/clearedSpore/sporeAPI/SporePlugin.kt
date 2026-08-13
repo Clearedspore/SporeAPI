@@ -34,6 +34,7 @@ import org.reflections.vfs.Vfs
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
 
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 open class SporePlugin : JavaPlugin() {
 
     open val prefix: String = "SporeAPI &f» ".accentDark()
@@ -254,13 +255,13 @@ open class SporePlugin : JavaPlugin() {
 
     private fun isCloudCommand(clazz: Class<*>): Boolean {
         val onClass = clazz.annotations.any {
-            it.annotationClass.java.`package`.name.startsWith("org.incendo.cloud.annotations")
+            (it as java.lang.annotation.Annotation).annotationType().`package`.name.startsWith("org.incendo.cloud.annotations")
         }
         if (onClass) return true
 
         return clazz.declaredMethods.any { method ->
             method.annotations.any {
-                it.annotationClass.java.`package`.name.startsWith("org.incendo.cloud.annotations")
+                (it as java.lang.annotation.Annotation).annotationType().`package`.name.startsWith("org.incendo.cloud.annotations")
             }
         }
     }
