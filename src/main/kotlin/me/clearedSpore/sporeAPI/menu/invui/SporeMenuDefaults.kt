@@ -21,7 +21,7 @@ object SporeMenuDefaults {
         .hideAll()
         .build()
 
-    val NEXT_ITEM = ItemBuilder(Material.GREEN_CARPET)
+    val NEXT_ITEM = ItemBuilder(Material.LIME_CARPET)
         .setName("Next Page".green())
         .hideAll()
         .build()

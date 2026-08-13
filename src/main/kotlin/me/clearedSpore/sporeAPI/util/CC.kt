@@ -41,6 +41,10 @@ object CC {
         'k' to "obfuscated", 'l' to "bold", 'm' to "strikethrough", 'n' to "underlined", 'o' to "italic", 'r' to "reset"
     )
 
+    fun String.mm(): Component {
+        return miniMessage.deserialize(this)
+    }
+
     fun String.translate(): String {
         var message = this
 
