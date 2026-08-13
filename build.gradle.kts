@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "1.1"
+version = "7.5"
 
 
 repositories {
