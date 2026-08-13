@@ -17,6 +17,7 @@ abstract class SporeModule {
     }
 
     open fun getCommands(): List<SporeCommand> = emptyList()
+    open fun getCloudCommands(): List<Any> = emptyList()
     open fun getListeners(): List<Listener> = emptyList()
 
     open fun onLoad() {}

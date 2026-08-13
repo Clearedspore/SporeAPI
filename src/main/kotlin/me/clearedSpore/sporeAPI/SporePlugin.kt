@@ -8,6 +8,8 @@ import me.clearedSpore.sporeAPI.annotation.RegisterListener
 import me.clearedSpore.sporeAPI.bossbar.BossBarManager
 import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
+import me.clearedSpore.sporeAPI.command.cloud.SporeCloudCommandManager
+import me.clearedSpore.sporeAPI.menu.invui.SporeMenuDefaults
 import me.clearedSpore.sporeAPI.serialization.SporeSerialization
 import me.clearedSpore.sporeAPI.task.SporeScheduler
 import me.clearedSpore.sporeAPI.task.TaskBuilder
@@ -39,6 +41,10 @@ open class SporePlugin : JavaPlugin() {
         SporeCommandManager(this).also {
             setupACF(it)
         }
+    }
+
+    val cloudCommandManager by lazy {
+        SporeCloudCommandManager(this)
     }
 
     open val scanPackage: String = this.javaClass.`package`.name
@@ -101,6 +107,7 @@ open class SporePlugin : JavaPlugin() {
     }
 
     final override fun onEnable() {
+        SporeMenuDefaults.register()
         Tasks.onInitialize(this)
         ActionBar.start()
         BossBarManager.init(this)
@@ -126,6 +133,16 @@ open class SporePlugin : JavaPlugin() {
                     moduleCount++
                 } catch (e: Exception) {
                     Logger.error("Failed to register module command ${command.javaClass.simpleName}")
+                    e.printStackTrace()
+                }
+            }
+
+            module.getCloudCommands().forEach { command ->
+                try {
+                    cloudCommandManager.register(command)
+                    moduleCount++
+                } catch (e: Exception) {
+                    Logger.error("Failed to register module cloud command ${command.javaClass.simpleName}")
                     e.printStackTrace()
                 }
             }
@@ -181,22 +198,29 @@ open class SporePlugin : JavaPlugin() {
 
     private fun scanAndRegisterCommands() {
         val classes = reflections.getTypesAnnotatedWith(RegisterCommand::class.java)
-        var count = 0
+        var acfCount = 0
+        var cloudCount = 0
         Logger.info("Command scan package: $scanPackage")
         Logger.info("Annotated command classes found: ${classes.size}")
 
         classes.forEach { clazz ->
             try {
-                if (!SporeCommand::class.java.isAssignableFrom(clazz)) {
-                    Logger.warn("Class ${clazz.simpleName} is annotated with @RegisterCommand but does not extend BaseCommand")
-                    return@forEach
+                val instance = kotlinObjectInstanceOrNull(clazz)
+                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+
+                when {
+                    SporeCommand::class.java.isAssignableFrom(clazz) -> {
+                        commandManager.registerCommand(instance as SporeCommand)
+                        acfCount++
+                    }
+                    isCloudCommand(clazz) -> {
+                        cloudCommandManager.register(instance)
+                        cloudCount++
+                    }
+                    else -> {
+                        Logger.warn("Class ${clazz.simpleName} is annotated with @RegisterCommand but is neither a SporeCommand nor a cloud command")
+                    }
                 }
-
-                val instance = (kotlinObjectInstanceOrNull(clazz)
-                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as SporeCommand
-
-                commandManager.registerCommand(instance)
-                count++
 
             } catch (e: Exception) {
                 Logger.error("Failed to register command ${clazz.simpleName}")
@@ -204,7 +228,20 @@ open class SporePlugin : JavaPlugin() {
             }
         }
 
-        Logger.info("Auto-registered $count command(s)")
+        Logger.info("Auto-registered $acfCount ACF command(s) and $cloudCount cloud command(s)")
+    }
+
+    private fun isCloudCommand(clazz: Class<*>): Boolean {
+        val onClass = clazz.annotations.any {
+            it.annotationClass.java.`package`.name.startsWith("org.incendo.cloud.annotations")
+        }
+        if (onClass) return true
+
+        return clazz.declaredMethods.any { method ->
+            method.annotations.any {
+                it.annotationClass.java.`package`.name.startsWith("org.incendo.cloud.annotations")
+            }
+        }
     }
 
     private fun scanAndRegisterListeners() {
