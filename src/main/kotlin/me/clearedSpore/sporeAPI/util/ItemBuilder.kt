@@ -92,7 +92,7 @@ class ItemBuilder private constructor(
         return this
     }
 
-    fun setLore(lore: List<Component>): ItemBuilder {
+    fun setComponentLore(lore: List<Component>): ItemBuilder {
         meta.lore(lore)
         return this
     }
