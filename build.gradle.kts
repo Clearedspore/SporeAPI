@@ -6,8 +6,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "7.5"
-
+version = "7.6"
 
 repositories {
     mavenCentral()
@@ -51,11 +50,17 @@ publishing {
     repositories {
         maven {
             name = "sporeRepository"
-            url = uri("https://repo.sporedev.eu/repository/sporeapi-releases/")
+            url = uri(
+                if (version.toString().endsWith("-SNAPSHOT")) {
+                    "https://repo.sporedev.eu/snapshots"
+                } else {
+                    "https://repo.sporedev.eu/releases"
+                }
+            )
 
             credentials {
-                username = System.getenv("NEXUS_USERNAME")
-                password = System.getenv("NEXUS_PASSWORD")
+                username = System.getenv("REPOSILITE_USERNAME")
+                password = System.getenv("REPOSILITE_TOKEN")
             }
         }
     }

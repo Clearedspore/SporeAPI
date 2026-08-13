@@ -28,6 +28,6 @@ jobs:
 
       - name: Publish
         env:
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          REPOSILITE_USERNAME: ${{ secrets.REPOSILITE_USERNAME }}
+          REPOSILITE_TOKEN: ${{ secrets.REPOSILITE_TOKEN }}
         run: ./gradlew publish
