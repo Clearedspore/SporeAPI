@@ -28,7 +28,7 @@ object SporeMenuDefaults {
         .build()
 
     val FILLER_ITEM = ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
-        .setName("".green())
+        .setName("test".green())
         .hideAll()
         .build()
 
