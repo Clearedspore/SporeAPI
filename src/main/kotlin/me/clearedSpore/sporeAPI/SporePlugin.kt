@@ -29,6 +29,7 @@ import org.reflections.scanners.Scanners
 import org.reflections.util.ConfigurationBuilder
 import org.reflections.util.FilterBuilder
 import org.reflections.vfs.Vfs
+import xyz.xenondevs.invui.InvUI
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -55,9 +56,6 @@ open class SporePlugin : JavaPlugin() {
         val jarFile = this.file
         val jarUrl = jarFile.toURI().toURL()
 
-        Logger.info("Scanning jar: $jarUrl")
-        Logger.info("Jar exists: ${jarFile.exists()}, length: ${jarFile.length()}")
-
         Vfs.addDefaultURLTypes(object : Vfs.UrlType {
             override fun matches(url: java.net.URL): Boolean {
                 return url.protocol == "file" && url.toExternalForm().endsWith(".jar")
@@ -73,9 +71,6 @@ open class SporePlugin : JavaPlugin() {
                 .setUrls(jarUrl)
                 .addClassLoaders(this.javaClass.classLoader)
         )
-
-        Logger.info("SubTypes store size: ${instance.store.get(Scanners.SubTypes.index())?.size}")
-        Logger.info("TypesAnnotated store size: ${instance.store.get(Scanners.TypesAnnotated.index())?.size}")
 
         instance
     }
@@ -129,6 +124,7 @@ open class SporePlugin : JavaPlugin() {
     }
 
     final override fun onEnable() {
+        InvUI.getInstance().setPlugin(this)
         SporeMenuDefaults.register()
         Tasks.onInitialize(this)
         ActionBar.start()
