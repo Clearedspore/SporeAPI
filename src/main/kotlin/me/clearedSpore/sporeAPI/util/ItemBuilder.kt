@@ -5,6 +5,7 @@ import com.destroystokyo.paper.profile.ProfileProperty
 import me.clearedSpore.sporeAPI.Extension.niceName
 import me.clearedSpore.sporeAPI.util.CC.gold
 import me.clearedSpore.sporeAPI.util.CC.green
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -64,6 +65,11 @@ class ItemBuilder private constructor(
         return this
     }
 
+    fun setName(name: Component): ItemBuilder {
+        meta.displayName(name)
+        return this
+    }
+
     fun setLore(vararg lore: String): ItemBuilder {
         meta.lore = lore.toList()
         return this
@@ -78,6 +84,23 @@ class ItemBuilder private constructor(
         val currentLore = meta.lore?.toMutableList() ?: mutableListOf()
         currentLore.add(line)
         meta.lore = currentLore
+        return this
+    }
+
+    fun setLore(vararg lore: Component): ItemBuilder {
+        meta.lore(lore.toMutableList())
+        return this
+    }
+
+    fun setLore(lore: List<Component>): ItemBuilder {
+        meta.lore(lore)
+        return this
+    }
+
+    fun addLoreLine(line: Component): ItemBuilder {
+        val currentLore = meta.lore()?.toMutableList() ?: mutableListOf()
+        currentLore.add(line)
+        meta.lore(currentLore)
         return this
     }
 

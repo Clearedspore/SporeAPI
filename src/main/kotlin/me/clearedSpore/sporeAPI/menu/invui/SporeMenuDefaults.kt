@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.menu.invui
 
 import me.clearedSpore.sporeAPI.util.CC.green
+import me.clearedSpore.sporeAPI.util.CC.mm
 import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.Material
@@ -28,7 +29,7 @@ object SporeMenuDefaults {
         .build()
 
     val FILLER_ITEM = ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
-        .setName("test".green())
+        .setName("<white>".mm())
         .hideAll()
         .build()
 
