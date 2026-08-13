@@ -50,6 +50,7 @@ publishing {
     repositories {
         maven {
             name = "sporeRepository"
+
             url = uri(
                 if (version.toString().endsWith("-SNAPSHOT")) {
                     "https://repo.sporedev.eu/snapshots"
@@ -61,6 +62,10 @@ publishing {
             credentials {
                 username = System.getenv("MAVEN_NAME")
                 password = System.getenv("MAVEN_SECRET")
+            }
+
+            authentication {
+                create<BasicAuthentication>("basic")
             }
         }
     }
