@@ -4,6 +4,6 @@ package me.clearedSpore.sporeAPI.annotation
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
 
-@Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
 annotation class RegisterCommand

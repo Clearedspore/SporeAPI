@@ -50,10 +50,13 @@ open class SporePlugin : JavaPlugin() {
     open val scanPackage: String = this.javaClass.`package`.name
 
     private val reflections by lazy {
+        val jarUrl = this.file.toURI().toURL()
+
         Reflections(
             ConfigurationBuilder()
                 .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes)
-                .forPackage(scanPackage, this.javaClass.classLoader)
+                .setUrls(jarUrl)
+                .addClassLoaders(this.javaClass.classLoader)
                 .filterInputsBy(FilterBuilder().includePackage(scanPackage))
         )
     }
