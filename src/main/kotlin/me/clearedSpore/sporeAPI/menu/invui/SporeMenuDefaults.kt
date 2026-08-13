@@ -49,8 +49,6 @@ object SporeMenuDefaults {
             }
             .build()
 
-
-
         Structure.addGlobalIngredient('x', Markers.CONTENT_LIST_SLOT_HORIZONTAL)
         Structure.addGlobalIngredient('#', FILLER_ITEM)
         Structure.addGlobalIngredient('<', backButton)
