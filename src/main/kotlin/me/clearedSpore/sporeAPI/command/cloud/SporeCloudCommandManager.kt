@@ -5,6 +5,7 @@ import me.clearedSpore.sporeAPI.SporePlugin
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.incendo.cloud.annotations.AnnotationParser
+import org.incendo.cloud.bukkit.parser.selector.MultiplePlayerSelectorParser
 import org.incendo.cloud.exception.InjectionException
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.injection.ParameterInjector
@@ -27,6 +28,8 @@ class SporeCloudCommandManager(
     )
 
     init {
+        manager.brigadierManager().setNativeNumberSuggestions(true)
+
         manager.parameterInjectorRegistry().registerInjector(
             CommandSender::class.java,
             ParameterInjector { context, _ -> context.sender().sender }

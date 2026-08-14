@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "8.5.4"
+version = "8.5.5"
 
 repositories {
     mavenCentral()
@@ -30,6 +30,7 @@ dependencies {
     implementation("org.incendo:cloud-core:2.0.0")
     implementation("org.incendo:cloud-annotations:2.0.0")
     implementation("org.incendo:cloud-paper:2.0.0")
+    implementation("org.incendo:cloud-brigadier:2.0.0")
 }
 
 java {
