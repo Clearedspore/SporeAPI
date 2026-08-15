@@ -3,6 +3,7 @@ package me.clearedSpore.sporeAPI.util
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.minimessage.tag.Tag
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
@@ -43,6 +44,7 @@ object CC {
 
     fun String.mm(): Component {
         return miniMessage.deserialize(this)
+            .decoration(TextDecoration.ITALIC, false)
     }
 
     fun String.translate(): String {
