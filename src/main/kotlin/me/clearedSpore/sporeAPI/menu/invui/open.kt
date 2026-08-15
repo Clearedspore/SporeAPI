@@ -2,6 +2,7 @@ package me.clearedSpore.sporeAPI.menu.invui
 
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.ItemStack
 import xyz.xenondevs.invui.gui.Gui
 import xyz.xenondevs.invui.item.Item
@@ -20,32 +21,52 @@ fun List<ItemStack>.toInvUI(): MutableList<Item> {
     return map { Item.simple(ItemBuilder(it)) }.toMutableList()
 }
 
-fun Gui.open(player: Player, title: String) {
-    Window.builder()
+fun Gui.open(player: Player, title: String, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
+    val builder = Window.builder()
         .setUpperGui(this)
         .setTitle(title)
-        .open(player)
+
+    if (onClose != null) {
+        builder.addCloseHandler(onClose)
+    }
+
+    builder.open(player)
 }
 
-fun Gui.open(player: Player, title: Component) {
-    Window.builder()
+fun Gui.open(player: Player, title: Component, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
+    val builder = Window.builder()
         .setUpperGui(this)
         .setTitle(title)
-        .open(player)
+
+    if (onClose != null) {
+        builder.addCloseHandler(onClose)
+    }
+
+    builder.open(player)
 }
 
-fun Gui.openSplit(player: Player, title: String, lower: Gui) {
-    Window.builder()
+fun Gui.openSplit(player: Player, title: String, lower: Gui, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
+    val builder = Window.builder()
         .setUpperGui(this)
         .setLowerGui(lower)
         .setTitle(title)
-        .open(player)
+
+    if (onClose != null) {
+        builder.addCloseHandler(onClose)
+    }
+
+    builder.open(player)
 }
 
-fun Gui.openSplit(player: Player, title: Component, lower: Gui) {
-    Window.builder()
+fun Gui.openSplit(player: Player, title: Component, lower: Gui, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
+    val builder = Window.builder()
         .setUpperGui(this)
         .setLowerGui(lower)
         .setTitle(title)
-        .open(player)
+
+    if (onClose != null) {
+        builder.addCloseHandler(onClose)
+    }
+
+    builder.open(player)
 }
