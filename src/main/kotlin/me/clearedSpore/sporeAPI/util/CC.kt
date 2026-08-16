@@ -24,6 +24,7 @@ object CC {
                 .resolver(StandardTags.defaults())
                 .tag("s_blue", Tag.styling(TextColor.fromHexString("#1D91FF")!!))
                 .tag("s_red", Tag.styling(TextColor.fromHexString("#F50000")!!))
+                .tag("s_green", Tag.styling(TextColor.fromHexString("&#4BFF2F")!!))
                 .build()
         )
         .build()

@@ -4,6 +4,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -49,6 +50,18 @@ class Webhook(private val webhookURL: String) {
         return sendPayload(payload)
     }
 
+    fun sendAsync(): CompletableFuture<String?> {
+        if (webhookURL.isEmpty() || webhookURL == "webhook_url") {
+            throw IllegalArgumentException("Invalid webhook URL: $webhookURL")
+        }
+
+        val payload = buildPayload()
+
+        return CompletableFuture.supplyAsync {
+            sendPayload(payload)
+        }
+    }
+
     private fun buildPayload(): String {
         val json = StringBuilder("{")
         content?.let { json.append("\"content\":\"${escape(it)}\",") }
@@ -67,17 +80,28 @@ class Webhook(private val webhookURL: String) {
         return try {
             val url = URL("$webhookURL?wait=true")
             val connection = url.openConnection() as HttpURLConnection
+
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
-            connection.outputStream.use { it.write(payload.toByteArray(StandardCharsets.UTF_8)) }
+
+            connection.outputStream.use {
+                it.write(payload.toByteArray(StandardCharsets.UTF_8))
+            }
 
             val responseCode = connection.responseCode
-            val responseText = connection.inputStream.bufferedReader().readText()
+            val responseStream = if (responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream
+            }
+
+            val responseText = responseStream?.bufferedReader()?.readText().orEmpty()
 
             if (responseCode in 200..299) {
                 val regex = """"id":"(\d+)"""".toRegex()
                 val messageId = regex.find(responseText)?.groups?.get(1)?.value
+
                 Logger.info("Webhook sent successfully, messageId=$messageId")
                 messageId
             } else {
@@ -85,7 +109,7 @@ class Webhook(private val webhookURL: String) {
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Logger.error("Failed to send webhook: ${e.message}")
             null
         }
     }
