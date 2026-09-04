@@ -1,7 +1,9 @@
 package me.clearedSpore.sporeAPI.repository
 
 import com.mongodb.client.MongoCollection
+import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
 import me.clearedSpore.sporeAPI.debug.blockingIo
 import me.clearedSpore.sporeAPI.util.Logger
@@ -54,6 +56,29 @@ abstract class MongoRepository<V : Any>(
                     ReplaceOptions().upsert(true)
                 )
             }.onFailure { Logger.error("Failed to save $collectionName '$id': ${it.message}") }
+        }
+    }
+
+    /**
+     * One round trip for the whole batch instead of one per value.
+     *
+     * Matters most on the shutdown path, where saving every loaded value is unavoidably blocking:
+     * a hundred players is one bulk write rather than a hundred sequential ones.
+     */
+    override fun saveAllBlocking(values: Iterable<V>) {
+        val models = values.map { value ->
+            ReplaceOneModel(
+                Filters.eq(idField, idOf(value)),
+                toDocument(value),
+                ReplaceOptions().upsert(true)
+            )
+        }
+
+        if (models.isEmpty()) return
+
+        blockingIo("$collectionName.saveAll") {
+            runCatching { collection.bulkWrite(models, BulkWriteOptions().ordered(false)) }
+                .onFailure { Logger.error("Failed to save ${models.size} $collectionName: ${it.message}") }
         }
     }
 
