@@ -21,6 +21,14 @@ enum class MainThreadIoPolicy {
 class MainThreadIoException(operation: String) :
     IllegalStateException("Blocking call '$operation' was made on the server thread")
 
+enum class LifecyclePhase {
+    STARTING,
+
+    RUNNING,
+
+    STOPPING
+}
+
 object SporeDebug {
 
     private const val MAX_WARNINGS = 20
@@ -33,6 +41,12 @@ object SporeDebug {
 
     @Volatile
     var mainThreadIoPolicy: MainThreadIoPolicy = MainThreadIoPolicy.WARN
+
+    @Volatile
+    var phase: LifecyclePhase = LifecyclePhase.STARTING
+
+    @Volatile
+    var reportDuringLifecycle: Boolean = false
 
     private val warnings = ArrayDeque<MainThreadIo>()
     private val lastWarned = ConcurrentHashMap<String, Long>()
@@ -60,6 +74,7 @@ object SporeDebug {
     internal fun check(operation: String) {
         val policy = mainThreadIoPolicy
         if (policy == MainThreadIoPolicy.IGNORE) return
+        if (phase != LifecyclePhase.RUNNING && !reportDuringLifecycle) return
         if (!Bukkit.isPrimaryThread()) return
 
         record(operation, policy)

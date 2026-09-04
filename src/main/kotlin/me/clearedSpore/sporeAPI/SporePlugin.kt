@@ -10,6 +10,8 @@ import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
 import me.clearedSpore.sporeAPI.command.cloud.SporeCloudCommandManager
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.debug.LifecyclePhase
+import me.clearedSpore.sporeAPI.debug.SporeDebug
 import me.clearedSpore.sporeAPI.event.SporeListeners
 import me.clearedSpore.sporeAPI.scan.SporeScanner
 import me.clearedSpore.sporeAPI.scoreboard.SidebarManager
@@ -170,10 +172,13 @@ open class SporePlugin : JavaPlugin() {
 
 
         onPluginEnable()
+
+        SporeDebug.phase = LifecyclePhase.RUNNING
         Logger.info("Plugin enabled.")
     }
 
     final override fun onDisable() {
+        SporeDebug.phase = LifecyclePhase.STOPPING
         SidebarManager.shutdown()
         Logger.info("Shutting down scheduler...")
         SporeScheduler.shutdown()
