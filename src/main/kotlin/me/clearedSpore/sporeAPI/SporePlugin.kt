@@ -9,6 +9,10 @@ import me.clearedSpore.sporeAPI.bossbar.BossBarManager
 import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
 import me.clearedSpore.sporeAPI.command.cloud.SporeCloudCommandManager
+import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.event.SporeListeners
+import me.clearedSpore.sporeAPI.scan.SporeScanner
+import me.clearedSpore.sporeAPI.scoreboard.SidebarManager
 import me.clearedSpore.sporeAPI.menu.invui.SporeMenuDefaults
 import me.clearedSpore.sporeAPI.serialization.SporeSerialization
 import me.clearedSpore.sporeAPI.task.SporeScheduler
@@ -25,10 +29,6 @@ import me.clearedSpore.sporeAPI.util.Cooldown
 import me.clearedSpore.sporeAPI.util.ItemBuilder
 import org.bukkit.plugin.java.JavaPlugin
 import org.reflections.Reflections
-import org.reflections.scanners.Scanners
-import org.reflections.util.ConfigurationBuilder
-import org.reflections.util.FilterBuilder
-import org.reflections.vfs.Vfs
 import xyz.xenondevs.invui.InvUI
 
 // Copyright (c) 2025 ClearedSpore
@@ -52,28 +52,7 @@ open class SporePlugin : JavaPlugin() {
 
     open val scanPackage: String = this.javaClass.`package`.name
 
-    private val reflections by lazy {
-        val jarFile = this.file
-        val jarUrl = jarFile.toURI().toURL()
-
-        Vfs.addDefaultURLTypes(object : Vfs.UrlType {
-            override fun matches(url: java.net.URL): Boolean {
-                return url.protocol == "file" && url.toExternalForm().endsWith(".jar")
-            }
-            override fun createDir(url: java.net.URL): Vfs.Dir {
-                return Vfs.DefaultUrlTypes.jarFile.createDir(url)
-            }
-        })
-
-        val instance = Reflections(
-            ConfigurationBuilder()
-                .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes)
-                .setUrls(jarUrl)
-                .addClassLoaders(this.javaClass.classLoader)
-        )
-
-        instance
-    }
+    private val reflections by lazy { SporeScanner.forPlugin(this) }
 
     private val modules = mutableListOf<SporeModule>()
     private val pluginCommands = mutableListOf<SporeCommand>()
@@ -126,9 +105,11 @@ open class SporePlugin : JavaPlugin() {
     }
 
     final override fun onEnable() {
+        SporeApi.init(this)
         InvUI.getInstance().setPlugin(this)
         SporeMenuDefaults.register()
         Tasks.onInitialize(this)
+        SporeCoroutines.init(this)
         ActionBar.start()
         BossBarManager.init(this)
         SporeScheduler.init(this)
@@ -169,7 +150,7 @@ open class SporePlugin : JavaPlugin() {
             }
 
             module.getListeners().forEach {
-                server.pluginManager.registerEvents(it, this)
+                SporeListeners.register(it)
             }
 
             val name = module.javaClass.simpleName
@@ -193,8 +174,10 @@ open class SporePlugin : JavaPlugin() {
     }
 
     final override fun onDisable() {
+        SidebarManager.shutdown()
         Logger.info("Shutting down scheduler...")
         SporeScheduler.shutdown()
+        SporeCoroutines.shutdown()
         Logger.info("Cancelling all tasks...")
         ActionBar.stop()
         Tasks.cancelAll()
@@ -226,7 +209,7 @@ open class SporePlugin : JavaPlugin() {
 
         classes.forEach { clazz ->
             try {
-                val instance = kotlinObjectInstanceOrNull(clazz)
+                val instance = SporeScanner.objectInstanceOrNull(clazz)
                     ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
 
                 when {
@@ -276,10 +259,10 @@ open class SporePlugin : JavaPlugin() {
                     return@forEach
                 }
 
-                val instance = (kotlinObjectInstanceOrNull(clazz)
+                val instance = (SporeScanner.objectInstanceOrNull(clazz)
                     ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as org.bukkit.event.Listener
 
-                server.pluginManager.registerEvents(instance, this)
+                SporeListeners.register(instance)
                 count++
 
             } catch (e: Exception) {

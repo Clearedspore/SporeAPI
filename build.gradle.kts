@@ -2,11 +2,12 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm") version "2.4.0"
+    `java-library`
     `maven-publish`
 }
 
 group = "eu.sporedev"
-version = "8.6"
+version = "9.0"
 
 repositories {
     mavenCentral()
@@ -20,6 +21,8 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.+")
     implementation(kotlin("stdlib"))
+
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.json:json:20250517")
     compileOnly("co.aikar:acf-paper:0.5.1-SNAPSHOT")
     implementation("org.reflections:reflections:0.10.2")
@@ -33,6 +36,8 @@ dependencies {
     implementation("org.incendo:cloud-brigadier:2.0.0")
 
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.2.2")
+
+    compileOnly("org.mongodb:mongodb-driver-sync:5.8.0")
 }
 
 java {
