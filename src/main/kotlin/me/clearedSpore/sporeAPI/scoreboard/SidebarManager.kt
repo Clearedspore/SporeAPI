@@ -1,6 +1,9 @@
 package me.clearedSpore.sporeAPI.scoreboard
 
 import io.papermc.paper.scoreboard.numbers.NumberFormat
+import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines.launchAsync
+import me.clearedSpore.sporeAPI.coroutine.withRunCtx
 import me.clearedSpore.sporeAPI.event.on
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.Logger
@@ -15,6 +18,7 @@ import org.bukkit.scoreboard.Objective
 import org.bukkit.scoreboard.Scoreboard
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -47,7 +51,7 @@ object SidebarManager {
         if (existing != null) {
             existing.sidebar = sidebar
             existing.reset()
-            existing.update()
+            existing.refreshNow()
             return
         }
 
@@ -63,7 +67,7 @@ object SidebarManager {
         sessions[player.uniqueId] = session
 
         player.scoreboard = session.board
-        session.update()
+        session.refreshNow()
 
         ensureRunning()
     }
@@ -74,7 +78,7 @@ object SidebarManager {
     }
 
     fun refresh(player: Player) {
-        sessions[player.uniqueId]?.update()
+        sessions[player.uniqueId]?.refreshNow()
     }
 
     fun isShowing(player: Player): Boolean = sessions.containsKey(player.uniqueId)
@@ -113,10 +117,7 @@ object SidebarManager {
                 return@forEach
             }
 
-            if (--session.ticksUntilUpdate > 0) return@forEach
-
-            session.ticksUntilUpdate = session.sidebar.updateIntervalTicks.coerceAtLeast(1L)
-            session.update()
+            session.tick()
         }
     }
 
@@ -133,6 +134,12 @@ object SidebarManager {
 
         var ticksUntilUpdate: Long = sidebar.updateIntervalTicks.coerceAtLeast(1L)
 
+        private var ticksUntilFetch: Long = 0L
+        private val fetching = AtomicBoolean(false)
+
+        @Volatile
+        private var snapshot: Any? = null
+
         private var lastTitle: Component? = null
         private var lastLines: List<Component> = emptyList()
         private var hidden = false
@@ -140,6 +147,53 @@ object SidebarManager {
         fun reset() {
             lastTitle = null
             lastLines = emptyList()
+            snapshot = null
+        }
+
+        fun tick() {
+            val sidebar = sidebar
+
+            if (sidebar is AsyncSidebar<*> && --ticksUntilFetch <= 0) {
+                ticksUntilFetch = sidebar.fetchIntervalTicks.coerceAtLeast(1L)
+                requestFetch(sidebar)
+            }
+
+            if (--ticksUntilUpdate > 0) return
+
+            ticksUntilUpdate = sidebar.updateIntervalTicks.coerceAtLeast(1L)
+            update()
+        }
+
+        fun refreshNow() {
+            val sidebar = sidebar
+
+            if (sidebar is AsyncSidebar<*>) {
+                ticksUntilFetch = sidebar.fetchIntervalTicks.coerceAtLeast(1L)
+                requestFetch(sidebar)
+            }
+
+            update()
+        }
+
+        private fun requestFetch(sidebar: AsyncSidebar<*>) {
+            if (!fetching.compareAndSet(false, true)) return
+
+            launchAsync {
+                try {
+                    val data = sidebar.fetchSnapshot(player)
+
+                    withRunCtx {
+                        if (sessions[player.uniqueId] === this@Session && this@Session.sidebar === sidebar) {
+                            snapshot = data
+                            update()
+                        }
+                    }
+                } catch (ex: Throwable) {
+                    Logger.warn("Sidebar fetch failed for ${player.name}: $ex")
+                } finally {
+                    fetching.set(false)
+                }
+            }
         }
 
         fun update() {
@@ -156,13 +210,16 @@ object SidebarManager {
                 objective.displaySlot = DisplaySlot.SIDEBAR
             }
 
-            val title = sidebar.title(player)
+            val data = snapshot
+            if (sidebar is AsyncSidebar<*> && data == null) return
+
+            val title = sidebar.titleFor(player, data)
             if (title != lastTitle) {
                 objective.displayName(title)
                 lastTitle = title
             }
 
-            val lines = sidebar.lines(player).take(MAX_LINES)
+            val lines = sidebar.linesFor(player, data).take(MAX_LINES)
             if (lines == lastLines) return
 
             for (index in lines.size until lastLines.size) {
