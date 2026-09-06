@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.scoreboard
 
+import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 
 // Copyright (c) 2025 ClearedSpore
@@ -9,9 +10,9 @@ import org.bukkit.entity.Player
 
 abstract class Sidebar {
 
-    abstract fun title(player: Player): String
+    abstract fun title(player: Player): Component
 
-    abstract fun lines(player: Player): List<String>
+    abstract fun lines(player: Player): List<Component>
 
     open fun shouldShow(player: Player): Boolean = true
 

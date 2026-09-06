@@ -3,7 +3,6 @@ package me.clearedSpore.sporeAPI.scoreboard
 import io.papermc.paper.scoreboard.numbers.NumberFormat
 import me.clearedSpore.sporeAPI.event.on
 import me.clearedSpore.sporeAPI.task.Tasks
-import me.clearedSpore.sporeAPI.util.CC.mm
 import me.clearedSpore.sporeAPI.util.Logger
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
@@ -134,8 +133,8 @@ object SidebarManager {
 
         var ticksUntilUpdate: Long = sidebar.updateIntervalTicks.coerceAtLeast(1L)
 
-        private var lastTitle: String? = null
-        private var lastLines: List<String> = emptyList()
+        private var lastTitle: Component? = null
+        private var lastLines: List<Component> = emptyList()
         private var hidden = false
 
         fun reset() {
@@ -159,7 +158,7 @@ object SidebarManager {
 
             val title = sidebar.title(player)
             if (title != lastTitle) {
-                objective.displayName(title.mm())
+                objective.displayName(title)
                 lastTitle = title
             }
 
@@ -170,13 +169,13 @@ object SidebarManager {
                 board.resetScores(ENTRIES[index])
             }
 
-            lines.forEachIndexed { index, text ->
+            lines.forEachIndexed { index, line ->
                 val entry = ENTRIES[index]
                 val team = board.getTeam(teamName(index))
                     ?: board.registerNewTeam(teamName(index)).apply { addEntry(entry) }
 
-                if (index >= lastLines.size || lastLines[index] != text) {
-                    team.prefix(text.mm())
+                if (index >= lastLines.size || lastLines[index] != line) {
+                    team.prefix(line)
                 }
 
                 if (index >= lastLines.size) {
