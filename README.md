@@ -4,7 +4,7 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 
 ![License](https://img.shields.io/github/license/ClearedSpore/SporeAPI)
 ![Latest release](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
-![Kotlin](https://img.shields.io/badge/kotlin-2.2.20-blueviolet?logo=kotlin)
+![Kotlin](https://img.shields.io/badge/kotlin-2.4.0-blueviolet?logo=kotlin)
 ![PaperMC](https://img.shields.io/badge/papermc-1.21+-blue?logo=spigotmc)
 ![Author](https://img.shields.io/badge/author-ClearedSpore-brightgreen)
 
@@ -16,11 +16,17 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 - [Boss bars](#boss-bars)
 - [Chat input](#chat-input)
 - [Commands and listeners](#commands-and-listeners)
+- [Events](#events)
+- [Coroutines](#coroutines)
+- [Scoreboards](#scoreboards)
+- [Registries](#registries)
+- [Repositories](#repositories)
 - [Cooldowns](#cooldowns)
 - [Confirmations](#confirmations)
 - [Tasks and scheduling](#tasks-and-scheduling)
 - [Discord webhooks](#discord-webhooks)
 - [Item builder](#item-builder)
+- [Debugging](#debugging)
 - Serialization
 - And much more!
 
@@ -42,14 +48,19 @@ You can find the repository and dependency [here](https://repo.sporedev.eu/#/rel
 
 # Getting started
 
-Most of the features below (commands, listeners, item builder, tasks, boss bars, action bar, serialization) set themselves up automatically, but only if your main class extends `SporePlugin` instead of `JavaPlugin`.
+Most of the features below (commands, listeners, item builder, tasks, boss bars, action bar, coroutines, sidebars, serialization) set themselves up automatically, but only if your main class extends `SporePlugin` instead of `JavaPlugin`.
+
+`SporePlugin` owns `onLoad`, `onEnable` and `onDisable` itself - that's where all the setup happens - so you override `onPluginLoad`, `onPluginEnable` and `onPluginDisable` instead. There's no `super` call to remember.
 
 ```kotlin
 class TestingPlugin : SporePlugin() {
 
-    override fun onEnable() {
-        super.onEnable()
+    override fun onPluginEnable() {
         Logger.initialize("Your plugin name")
+    }
+
+    override fun onPluginDisable() {
+        // your own cleanup, the API cleans up after itself
     }
 }
 ```
@@ -458,6 +469,32 @@ class TestCommand : SporeCommand() {
 }
 ```
 
+## Cloud commands
+
+`@RegisterCommand` also works with [Cloud](https://cloud.incendo.org/) annotated commands. SporeAPI looks at the class: if it extends `SporeCommand` it goes to ACF, and if it (or one of its methods) carries a Cloud annotation it goes to the Cloud manager instead. You don't pick, it just routes.
+
+```kotlin
+@RegisterCommand
+class HealCommand {
+
+    @Command("heal [target]")
+    @Permission("myplugin.heal")
+    fun heal(sender: Player, @Argument("target") target: Player?) {
+        (target ?: sender).health = 20.0
+    }
+}
+```
+
+`Player` is injected for you - a console sender gets "Only players can run this command." instead of a crash.
+
+If you need to configure the manager (custom parsers, Brigadier settings, suggestions), override `setupCloud` in your main class, and use the `cloudCommandManager` property when something wants the manager itself.
+
+```kotlin
+override fun setupCloud(manager: SporeCloudCommandManager) {
+    CommandSuggestions.register(manager.manager)
+}
+```
+
 ## Listeners
 
 Same idea, but for a normal Bukkit `Listener`. Just add `@RegisterListener` and it gets registered automatically.
@@ -474,6 +511,228 @@ class JoinListener : Listener {
 ```
 
 This also works with Kotlin `object`s, so you can use a singleton instead of a normal class if you prefer.
+
+---
+
+# Events
+
+If a whole listener class feels like too much for a single handler, you can register one inline. `on` just registers it, `subscribe` gives you back an `EventSubscription` so you can unregister it later.
+
+```kotlin
+on<PlayerJoinEvent> { it.player.sendMessage("Welcome!".green()) }
+
+val subscription = subscribe<BlockBreakEvent>(EventPriority.HIGH, ignoreCancelled = true) {
+    it.player.sendMessage("You broke ${it.block.type}")
+}
+
+subscription.unregister()
+```
+
+Both take a priority and `ignoreCancelled`, same as `@EventHandler` would.
+
+## Waiting for an event
+
+`awaitEvent` suspends until a matching event fires, which is much nicer than keeping a map of "players I'm waiting on" around. Pass `timeoutTicks` and you get `null` back if nothing matched in time.
+
+```kotlin
+SporeCoroutines.launch {
+    val move = awaitEvent<PlayerMoveEvent>(timeoutTicks = 100) { it.player == player }
+
+    if (move == null) {
+        player.sendMessage("You didn't move in time".red())
+        return@launch
+    }
+}
+```
+
+## Suspending handlers
+
+Handlers can suspend. Inline, that's `onAsync` / `subscribeAsync`:
+
+```kotlin
+onAsync<PlayerJoinEvent> { event ->
+    val profile = profileRepository.find(event.player.uniqueId.toString())
+
+    if (!event.player.isOnline) return@onAsync
+    applyProfile(event.player, profile)
+}
+```
+
+In a `@RegisterListener` class, just mark the method `suspend` - `SporeListeners` spots the signature and registers it for you:
+
+```kotlin
+@RegisterListener
+class JoinListener : Listener {
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    suspend fun onJoin(event: PlayerJoinEvent) {
+        val profile = profileRepository.find(event.player.uniqueId.toString())
+
+        if (!event.player.isOnline) return
+        applyProfile(event.player, profile)
+    }
+}
+```
+
+Plain Bukkit can't do this - a `suspend fun` compiles to a method with an extra `Continuation` parameter, and `registerEvents` rejects anything that isn't a single `Event` parameter, so the handler would silently never fire. SporeAPI registers those methods itself instead.
+
+Three things to keep in mind:
+
+- **You can't cancel or change the event past a suspension point.** The event finishes and the server moves on while your coroutine is still parked. SporeAPI logs a warning if you attach a suspending handler to a `Cancellable` event for exactly this reason.
+- **Priority only decides when the handler starts.** Ordering against other plugins holds up to your first suspension point and means nothing after it.
+- **Re-check state after resuming.** The player may have disconnected while you were away, so guard with `player.isOnline`.
+
+Everything before the first real suspension point still runs inline on the main thread, so a `suspend` handler that never actually suspends behaves exactly like a normal one.
+
+---
+
+# Coroutines
+
+`SporeCoroutines` gives you a scope that's tied to your plugin's lifetime, so anything still running gets cancelled on disable instead of leaking into the next reload.
+
+```kotlin
+SporeCoroutines.launch { /* starts on the main thread */ }
+SporeCoroutines.launchAsync { /* starts off the main thread */ }
+```
+
+Inside a coroutine you switch threads with `withAsyncCtx` and `withRunCtx`, which is the pattern for "load something slow, then touch the world with it":
+
+```kotlin
+SporeCoroutines.launch {
+    val data = withAsyncCtx { repository.findBlocking(id) }   // off the main thread
+    withRunCtx { player.sendMessage("Loaded $data") }         // back on the main thread
+}
+```
+
+`delayTicks(20)` is there too if you think in ticks rather than milliseconds.
+
+The main dispatcher only actually schedules a task when it has to - if you're already on the server thread, `withRunCtx` runs your block inline.
+
+---
+
+# Scoreboards
+
+`Sidebar` is a scoreboard sidebar built from Adventure components, so you get MiniMessage, hex colours and per-line formatting without touching teams or entry strings yourself. Lines are diffed on every update, so only what actually changed gets sent to the client.
+
+```kotlin
+class MySidebar : Sidebar() {
+
+    override val updateIntervalTicks = 20L
+
+    override fun title(player: Player): Component = "<s_blue><b>MyServer".mm()
+
+    override fun lines(player: Player): List<Component> = listOf(
+        Component.empty(),
+        "<white>Kills: <green>${player.getStatistic(Statistic.PLAYER_KILLS)}".mm(),
+        "<white>Online: <green>${Bukkit.getOnlinePlayers().size}".mm()
+    )
+
+    override fun shouldShow(player: Player): Boolean = player.world.name != "lobby"
+}
+```
+
+Then show it:
+
+```kotlin
+SidebarManager.show(player, sidebar)
+SidebarManager.refresh(player)   // force an update now
+SidebarManager.hide(player)
+```
+
+One instance can serve every player - the manager keeps the per-player state - and it cleans up on quit and on plugin disable by itself. By default it refuses to take over a scoreboard that another plugin already owns and warns instead; set `SidebarManager.takeOverExisting = true` if you want it to win anyway. Boards are capped at `SidebarManager.MAX_LINES` (15) lines.
+
+## Async sidebars
+
+If a value on your board is expensive - a balance behind a database query, a rank from another plugin's cache - reading it in `lines()` means doing that work on the main thread every update, for every player. `AsyncSidebar` splits it in two: `fetch` runs off the main thread and returns a snapshot, `title` and `lines` run on the main thread with that snapshot.
+
+```kotlin
+class MySidebar : AsyncSidebar<MySidebar.Data>() {
+
+    data class Data(val balance: String, val rank: Component)
+
+    override val updateIntervalTicks = 20L
+
+    // Off the main thread - only touch thread-safe things here, not the Bukkit API.
+    override fun fetch(player: Player) = Data(
+        balance = economy.formatted(player.uniqueId),
+        rank = ranks.prefixOf(player.uniqueId)
+    )
+
+    // Main thread - statistics, inventories and the world are safe here.
+    override fun lines(player: Player, data: Data): List<Component> = listOf(
+        "<white>Balance: <green>${data.balance}".mm(),
+        "<white>Rank: ".mm().append(data.rank),
+        "<white>Kills: <green>${player.getStatistic(Statistic.PLAYER_KILLS)}".mm()
+    )
+
+    override fun title(player: Player, data: Data): Component = "<s_blue><b>MyServer".mm()
+}
+```
+
+Fetches never overlap - if one is still running when the next is due, that tick is skipped - and `lines` is never called before the first snapshot lands, so you get a blank board for a moment rather than a board full of zeroes. Use `fetchIntervalTicks` if you want to fetch less often than you render.
+
+Text that comes from outside your plugin (rank prefixes, nicknames) is usually legacy-coded rather than MiniMessage, so build it into a component and `append` it instead of interpolating it into a `.mm()` string - otherwise the colour codes show up as literal text.
+
+---
+
+# Registries
+
+`Registry` is a thread-safe id-to-value map for your content - items, mobs, quests, whatever - with an optional annotation it can scan for.
+
+```kotlin
+object ItemRegistry : Registry<Item>(Item::class, RegisterItem::class) {
+    override fun idOf(value: Item): String = value.id
+}
+
+ItemRegistry.scan(plugin)          // finds everything annotated with @RegisterItem
+ItemRegistry.register(myItem)      // or register by hand
+
+val item = ItemRegistry["magic_sword"]   // null if missing
+val same = ItemRegistry.require("magic_sword")   // throws if missing
+```
+
+Registering the same id twice throws `DuplicateRegistrationException` instead of quietly overwriting. Override `onRegister` if you need to hook each entry as it comes in.
+
+Every registry is tracked in `RegistryIndex`, which is what `/<label> debug` uses to list them and their sizes.
+
+---
+
+# Repositories
+
+`Repository` is a small storage interface with two of every method: a `Blocking` one you call when you're already off the main thread, and a `suspend` one that hops off it for you.
+
+```kotlin
+val user = userRepository.findBlocking(id)   // blocking, off-thread callers
+
+SporeCoroutines.launch {
+    val user = userRepository.find(id)       // suspends, runs off the main thread
+}
+```
+
+`MongoRepository` implements it against a Mongo collection - you supply the document mapping:
+
+```kotlin
+object UserRepository : MongoRepository<User>("users") {
+    override fun idOf(value: User) = value.uuid.toString()
+    override fun toDocument(value: User) = Document("_id", idOf(value)).append("name", value.name)
+    override fun fromDocument(document: Document) = User(
+        UUID.fromString(document.getString("_id")),
+        document.getString("name")
+    )
+}
+```
+
+Point `SporeMongo` at your database once during enable and every repository can resolve its collection:
+
+```kotlin
+SporeMongo.init(myMongoDatabase)
+```
+
+Your plugin still owns the client and its lifetime - SporeAPI never opens or closes the connection.
+
+`YamlRepository` is the same interface backed by a folder of `.yml` files, with `write`/`read` instead of `toDocument`/`fromDocument`.
+
+Every blocking call in both goes through the main-thread IO guard, so calling one on the server thread shows up in [debugging](#debugging).
 
 ---
 
@@ -589,6 +848,34 @@ val loaded = SporeSerializer.deserialize(saved, Location::class.java)
 ```
 
 For anything else, it just falls back to normal JSON, so it works with most of your own data classes too. If you want full control over how a type is saved, you can register your own codec with `SporeCodecRegistry.register(MyType::class.java, MyCodec())`.
+
+---
+
+# Debugging
+
+The usual reason a server starts lagging is something blocking the main thread - a database read, a file write - somewhere you forgot about. `SporeDebug` watches for that. Every blocking repository call goes through it, and you can wrap your own with `blockingIo`:
+
+```kotlin
+fun loadSettings(): Settings = blockingIo("settings.load") {
+    // reads a file, queries an API, whatever
+}
+```
+
+If that runs on the server thread you get a warning with a stack trace pointing at the caller. Repeats of the same operation are collapsed so one bad call in a loop can't spam your console.
+
+```kotlin
+SporeDebug.mainThreadIoPolicy = MainThreadIoPolicy.THROW   // WARN (default), IGNORE, THROW
+```
+
+`THROW` is worth turning on in development - it fails loudly the first time instead of leaving you to notice the lag later. Startup and shutdown are exempt by default, since blocking there is usually deliberate; set `SporeDebug.reportDuringLifecycle = true` if you want those too.
+
+You can also register a debug command that reports scheduler load, running coroutines, sidebars, Mongo status, your registries and the recorded warnings:
+
+```kotlin
+SporeDebugCommand.register(cloudCommandManager, "mycommand", "myplugin.admin")
+```
+
+That gives you `/mycommand debug`, plus `/mycommand debug io` to toggle the guard without a restart.
 
 ---
 
