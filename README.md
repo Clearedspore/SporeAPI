@@ -15,6 +15,7 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 - [Logger utility](#logger)
 - [Boss bars](#boss-bars)
 - [Chat input](#chat-input)
+- [Dialogs](#dialogs)
 - [Commands and listeners](#commands-and-listeners)
 - [Events](#events)
 - [Coroutines](#coroutines)
@@ -448,6 +449,110 @@ The player will get a small message asking them to type something. If you don't 
 
 ---
 
+# Dialogs
+
+Paper's dialogs are the pop-up screens with text, inputs and buttons. They're great for forms, confirmations and info screens, but the raw API is a pile of builders. SporeAPI wraps it so a dialog is just a few lines:
+
+```kotlin
+player.openDialog {
+    title("Rename your pet")
+    message("Pick a new name for <white>${pet.name}</white>.")
+
+    val name = textField("Name") {
+        initial = pet.name
+        maxLength = 16
+    }
+    val glowing = checkbox("Glowing")
+
+    button("Save") { click ->
+        pet.rename(click[name])
+        pet.isGlowing = click[glowing]
+    }
+}
+```
+
+All text is MiniMessage, with the same tags as `.mm()`. Every input gives you back a handle, so `click[name]` is a `String` and `click[glowing]` is a `Boolean` - no keys to keep track of.
+
+## Reusable dialogs
+
+For a dialog you open from more than one place, make it a class or an object. `build` runs every time it opens, so the content can depend on the player:
+
+```kotlin
+object SettingsDialog : SporeDialog() {
+
+    override fun DialogBuilder.build(player: Player) {
+        val settings = Settings.of(player)
+
+        title("Settings")
+        val volume = slider("Volume", 0..100) { initial = settings.volume }
+        val mode = choice("Mode") {
+            option("easy", "<green>Easy", selected = settings.mode == "easy")
+            option("hard", "<red>Hard", selected = settings.mode == "hard")
+        }
+
+        button("Save") { click ->
+            settings.volume = click[volume]
+            settings.mode = click[mode]
+        }
+    }
+
+    override fun onClose(player: Player, reason: DialogCloseReason) {
+        // saved, cancelled, replaced, left...
+    }
+}
+
+SettingsDialog.open(player)
+```
+
+`val shop = dialog { player -> ... }` does the same without a class.
+
+## Inputs
+
+| Input                            | Gives you              | Options                                                                     |
+|----------------------------------|------------------------|-----------------------------------------------------------------------------|
+| `textField("Name")`              | `String`               | `initial`, `maxLength`, `width`, `showLabel`, `multiline(maxLines, height)` |
+| `checkbox("Glowing")`            | `Boolean`              | `initial`                                                                   |
+| `slider("Volume", 0..100)`       | `Int`                  | `initial`, `step`, `width`, `format`                                        |
+| `slider("Speed", 0.5f..2f)`      | `Float`                | the same                                                                    |
+| `choice("Mode") { option(...) }` | the chosen option's id | `width`, `showLabel`                                                        |
+
+There's also `message("...")` for text and `item(itemStack, description = "...")` for an item in the body.
+
+## Buttons
+
+- `button("Save") { click -> }` runs your code on the server.
+- `commandButton("Spawn", "/spawn")` runs a command as the player.
+- `linkButton("Website", "https://...")` opens a link. The server isn't told about this one.
+- `exitButton("Cancel") { }` is the footer button, and it's also what Escape does. Dialogs with buttons get a "Close" one by default; `noExitButton()` removes it, but then closing with Escape can't be noticed.
+- `confirm(yes = "Delete", no = "Keep") { click -> }` makes a yes/no dialog instead of a button list.
+- A dialog without any buttons is a notice with a single OK button. Change it with `okButton("Got it") { }`.
+
+`columns` sets how many buttons fit on a row (2 by default).
+
+## Closing
+
+A dialog closes when a button is clicked. Inside a handler you can also send the player somewhere else:
+
+```kotlin
+button("Save") { click ->
+    if (click[name].isBlank()) {
+        click.player.sendMessage("You need a name!")
+        click.reopen()
+        return@button
+    }
+
+    click.open(ConfirmRenameDialog)
+}
+```
+
+Set `afterClick = AfterClick.KEEP_OPEN` to leave it open after a click, or `AfterClick.WAIT_FOR_RESPONSE` to show a waiting screen while you check something. It closes on its own if your handler doesn't open or reopen anything.
+
+From anywhere else, use `SporeDialogs.close(player)`, `SporeDialogs.isOpen(player)` and `SporeDialogs.current(player)`.
+
+`onClose { reason -> }`, or overriding `onClose` in a class, tells you why it closed: `BUTTON`, `EXIT` (the exit button, "no", or Escape), `CLOSED`, `REPLACED` or `QUIT`. Open dialogs are closed when your plugin disables, and errors in your handlers show up as [incidents](#incidents).
+
+---
+
 # Commands and listeners
 
 SporeAPI is built on top of ACF (Aikar's Command Framework), and can register your commands and listeners for you automatically, so you don't have to do it by hand in `onEnable`.
@@ -853,6 +958,10 @@ For anything else, it just falls back to normal JSON, so it works with most of y
 
 # Debugging
 
+SporeAPI has two tools for this: the **main-thread IO guard**, which catches the calls that cause lag, and **incidents**, which turn errors into something you can actually read.
+
+## Main-thread IO
+
 The usual reason a server starts lagging is something blocking the main thread - a database read, a file write - somewhere you forgot about. `SporeDebug` watches for that. Every blocking repository call goes through it, and you can wrap your own with `blockingIo`:
 
 ```kotlin
@@ -869,13 +978,144 @@ SporeDebug.mainThreadIoPolicy = MainThreadIoPolicy.THROW   // WARN (default), IG
 
 `THROW` is worth turning on in development - it fails loudly the first time instead of leaving you to notice the lag later. Startup and shutdown are exempt by default, since blocking there is usually deliberate; set `SporeDebug.reportDuringLifecycle = true` if you want those too.
 
-You can also register a debug command that reports scheduler load, running coroutines, sidebars, Mongo status, your registries and the recorded warnings:
+## Incidents
+
+Every error SporeAPI catches - a listener that throws, a failed database call, a coroutine that crashes - becomes an **incident**. Instead of a wall of stack trace, you get this:
+
+```text
+[MyPlugin] (error) kit.give failed [ref sLOi8] - seen 3x
+[MyPlugin] (error)   What:    NumberFormatException: For input string: "abc"
+[MyPlugin] (error)   Why:     Some text couldn't be read as a number.
+[MyPlugin] (error)   Hint:    Check config values and command arguments that are supposed to be numbers.
+[MyPlugin] (error)   Where:   KitService.kt:42 (KitService.give)
+[MyPlugin] (error)   Inside:  listener.KitListener.onJoin
+[MyPlugin] (error)   Details: player=Steve
+[MyPlugin] (error)   Thread:  Server thread (main thread), while running
+[MyPlugin] (error)   More:    /mycommand debug error sLOi8
+```
+
+- **Where** is the first line of *your* code in the trace - not Bukkit's, not SporeAPI's.
+- **Why** and **Hint** come from a built-in list of common errors, which you can add to.
+- The same error from the same line is grouped: it's logged at most once every 30 seconds, and it keeps the same ref, so the ref a player gave you still works later.
+
+Warnings print just the summary. Errors add a short trace underneath - `IncidentReporter.consoleTraceDepth` sets how many lines, 0 turns it off.
+
+### runDebug
+
+Wrap anything that might fail in `runDebug`. It returns the result, or `null` if the block threw (after reporting it), so a fallback is just `?:`:
+
+```kotlin
+val kits = runDebug("kits.load") { loadKits() } ?: emptyList()
+```
+
+Add details and they show up in the report, and use `onFailure` to tell the player something went wrong:
+
+```kotlin
+runDebug(
+    "kit.give",
+    details = mapOf("player" to player.name, "kit" to kit.id),
+    onFailure = { player.error("Couldn't give you that kit (ref ${it.id})") }
+) {
+    kit.giveTo(player)
+}
+```
+
+The default severity is `ERROR`. Pass `Severity.WARNING` when there's a fallback and it isn't a big deal, or `Severity.CRITICAL` when the plugin can't work without it. Name operations like `area.action` - `kits.load`, `profiles.save` - so they read the same as the IO guard's.
+
+Inside coroutines, use `runDebugSuspending`. Real cancellation still goes through untouched, but a `withTimeout` that runs out inside the block counts as a failure:
+
+```kotlin
+val profile = runDebugSuspending("profiles.load") { profiles.find(uuid) }
+```
+
+`runDebug` isn't `inline` on purpose: its block can't suspend, which is what keeps the breadcrumbs below on the right thread.
+
+If you already have a `catch`, report it directly:
+
+```kotlin
+} catch (e: Exception) {
+    IncidentReporter.report("shop.purchase", e, Severity.ERROR, mapOf("item" to item.id))
+}
+```
+
+### Breadcrumbs
+
+Incidents remember what they happened *inside of*. Listeners, event handlers and `runDebug` blocks all add themselves, so a failure in `kit.give` called from a join listener shows `Inside: listener.KitListener.onJoin`. You can add your own layer without catching anything:
+
+```kotlin
+DebugContext.inside("arena.start") {
+    // anything reported in here shows "Inside: arena.start"
+}
+```
+
+### Already covered
+
+You don't need to wrap these - they go through the reporter already:
+
+- `@EventHandler` methods registered through `SporeListeners` (normal and `suspend`), plus `on<T> { }` and `onAsync<T> { }` handlers
+- Coroutines started with `SporeCoroutines.launch` / `launchAsync` that throw
+- Every `MongoRepository` and `YamlRepository` call
+- Modules, commands, listeners and registry entries that fail to register or enable
+- Async sidebar fetches, webhook sends and `SporeSerializer` decoding, as warnings
+
+### Explanations
+
+The built-in list covers the usual suspects: null pointers, bad numbers, async Bukkit calls, main-thread IO, missing classes, file and network errors, MongoDB timeouts and logins, broken YAML and more. Add your own for your plugin's exceptions:
+
+```kotlin
+IncidentExplainers.register<KitNotFoundException> {
+    Explanation("That kit doesn't exist.", "Check the kit id in kits.yml.")
+}
+```
+
+Yours win over the built-in ones, and returning `null` passes it on - handy for matching on the message. For a library that might not be installed, register by class name so nothing gets loaded:
+
+```kotlin
+IncidentExplainers.register(
+    "com.zaxxer.hikari.pool.HikariPool\$PoolInitializationException",
+    "Couldn't connect to the SQL database.",
+    "Check the host, port and password in config.yml."
+)
+```
+
+### Commands
+
+Register the debug command:
 
 ```kotlin
 SporeDebugCommand.register(cloudCommandManager, "mycommand", "myplugin.admin")
 ```
 
-That gives you `/mycommand debug`, plus `/mycommand debug io` to toggle the guard without a restart.
+| Command                              | What it does                                                                                           |
+|--------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `/mycommand debug`                   | Overview - scheduler load, coroutines, sidebars, Mongo, registries, the IO guard and an incident count |
+| `/mycommand debug errors`            | The last 10 incidents, newest first. Click one for details                                             |
+| `/mycommand debug error <ref>`       | Everything about one incident: what, why, where, breadcrumbs, how often, and a short trace             |
+| `/mycommand debug error <ref> trace` | Prints the full stack trace to the console                                                             |
+| `/mycommand debug errors clear`      | Forgets every incident                                                                                 |
+| `/mycommand debug io`                | Toggles the IO guard without a restart                                                                 |
+
+Refs tab-complete, and a lowercase ref still works as long as only one incident matches.
+
+To alert staff in chat when something breaks, pass `notifyStaff = true` - everyone online with the permission gets a clickable message for every new error:
+
+```kotlin
+SporeDebugCommand.register(cloudCommandManager, "mycommand", "myplugin.admin", notifyStaff = true)
+```
+
+### Hooking in
+
+`IncidentReporter.onIncident { }` runs for every incident that gets logged, which is how you'd send them to Discord, a database, or anywhere else:
+
+```kotlin
+IncidentReporter.onIncident { incident ->
+    if (incident.severity != Severity.WARNING) {
+        Webhook(webhookUrl).setMessage("${incident.operation} failed (ref ${incident.id})").sendAsync()
+    }
+}
+```
+
+It runs on whichever thread reported the error, so keep anything slow off it.
 
 ---
 

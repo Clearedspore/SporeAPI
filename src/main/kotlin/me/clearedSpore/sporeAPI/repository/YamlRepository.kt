@@ -1,7 +1,7 @@
 package me.clearedSpore.sporeAPI.repository
 
 import me.clearedSpore.sporeAPI.debug.blockingIo
-import me.clearedSpore.sporeAPI.util.Logger
+import me.clearedSpore.sporeAPI.debug.runDebug
 import org.bukkit.configuration.file.YamlConfiguration
 import java.io.File
 
@@ -29,9 +29,9 @@ abstract class YamlRepository<V : Any>(
         val file = fileFor(id)
         if (!file.isFile) return@blockingIo null
 
-        runCatching { read(id, YamlConfiguration.loadConfiguration(file)) }
-            .onFailure { Logger.error("Failed to load ${file.name}: ${it.message}") }
-            .getOrNull()
+        runDebug("${folder.name}.load", details = mapOf("file" to file.name)) {
+            read(id, YamlConfiguration.loadConfiguration(file))
+        }
     }
 
     override fun findAllBlocking(): List<V> = blockingIo("${folder.name} findAll") {
@@ -39,9 +39,9 @@ abstract class YamlRepository<V : Any>(
             ?: return@blockingIo emptyList()
 
         files.sortedBy { it.name }.mapNotNull { file ->
-            runCatching { read(file.nameWithoutExtension, YamlConfiguration.loadConfiguration(file)) }
-                .onFailure { Logger.error("Failed to load ${file.name}: ${it.message}") }
-                .getOrNull()
+            runDebug("${folder.name}.load", details = mapOf("file" to file.name)) {
+                read(file.nameWithoutExtension, YamlConfiguration.loadConfiguration(file))
+            }
         }
     }
 
@@ -51,18 +51,19 @@ abstract class YamlRepository<V : Any>(
         val id = idOf(value)
 
         blockingIo("${folder.name}/$id.yml save") {
-            runCatching {
+            runDebug("${folder.name}.save", details = mapOf("file" to "$id.yml")) {
                 val config = YamlConfiguration()
                 write(value, config)
                 config.save(fileFor(id))
-            }.onFailure { Logger.error("Failed to save $id.yml: ${it.message}") }
+            }
         }
     }
 
     override fun deleteBlocking(id: String) {
         blockingIo("${folder.name}/$id.yml delete") {
-            runCatching { fileFor(id).delete() }
-                .onFailure { Logger.error("Failed to delete $id.yml: ${it.message}") }
+            runDebug("${folder.name}.delete", details = mapOf("file" to "$id.yml")) {
+                fileFor(id).delete()
+            }
         }
     }
 }

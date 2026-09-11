@@ -1,5 +1,7 @@
 package me.clearedSpore.sporeAPI.util
 
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.debug.model.Severity
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -109,7 +111,7 @@ class Webhook(private val webhookURL: String) {
                 null
             }
         } catch (e: Exception) {
-            Logger.error("Failed to send webhook: ${e.message}")
+            IncidentReporter.report("webhook.send", e, Severity.WARNING)
             null
         }
     }
@@ -141,7 +143,7 @@ class Webhook(private val webhookURL: String) {
             }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            IncidentReporter.report("webhook.edit", e, Severity.WARNING, mapOf("message" to messageId))
         }
     }
 

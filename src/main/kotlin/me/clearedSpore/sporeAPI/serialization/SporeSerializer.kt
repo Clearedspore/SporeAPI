@@ -1,5 +1,8 @@
 package me.clearedSpore.sporeAPI.serialization
 
+import me.clearedSpore.sporeAPI.debug.model.Severity
+import me.clearedSpore.sporeAPI.debug.runDebug
+
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
@@ -28,10 +31,8 @@ object SporeSerializer {
             return (codec as SporeCodec<T>).decode(data)
         }
 
-        return try {
+        return runDebug("serialization.decode", Severity.WARNING, mapOf("type" to type.simpleName)) {
             GsonHolder.gson.fromJson(data, type)
-        } catch (e: Exception) {
-            null
         }
     }
 }

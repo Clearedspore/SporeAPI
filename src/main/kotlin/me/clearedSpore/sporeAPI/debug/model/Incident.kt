@@ -3,6 +3,10 @@ package me.clearedSpore.sporeAPI.debug.model
 import me.clearedSpore.sporeAPI.debug.LifecyclePhase
 import me.clearedSpore.sporeAPI.util.IdUtil
 
+// Copyright (c) 2025 ClearedSpore
+// Licensed under the MIT License. See LICENSE file in the project root for details.
+
+
 data class Incident(
     val id: String = IdUtil.generateId(5),
     val operation: String,
@@ -15,5 +19,6 @@ data class Incident(
     val phase: LifecyclePhase,
     val breadcrumbs: List<String> = emptyList(),
     val location: String? = null,
-    val fingerprint: String? = null
+    val fingerprint: String? = null,
+    val explanation: Explanation? = null
 )

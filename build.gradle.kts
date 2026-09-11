@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "9.6-SNAPSHOT"
+version = "9.7"
 
 repositories {
     mavenCentral()

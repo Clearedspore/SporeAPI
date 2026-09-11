@@ -4,6 +4,10 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import me.clearedSpore.sporeAPI.SporeApi
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.debug.DebugContext
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.debug.model.Severity
+import me.clearedSpore.sporeAPI.debug.runDebugSuspending
 import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.Bukkit
 import org.bukkit.event.Cancellable
@@ -42,15 +46,19 @@ object SporeEvents {
         handler: (T) -> Unit
     ): EventSubscription {
         val listener = object : Listener {}
+        val operation = "event.${type.simpleName}"
 
         val executor = EventExecutor { _, event ->
             if (!type.isInstance(event)) return@EventExecutor
 
             try {
-                handler(type.cast(event))
+                DebugContext.inside(operation) { handler(type.cast(event)) }
             } catch (exception: Exception) {
-                Logger.error("Handler for ${type.simpleName} threw: ${exception.message}")
-                exception.printStackTrace()
+                IncidentReporter.report(
+                    operation = operation,
+                    error = exception,
+                    severity = Severity.ERROR
+                )
             }
         }
 
@@ -75,7 +83,7 @@ object SporeEvents {
         warnIfCancellable(type)
 
         return register(type, priority, ignoreCancelled) { event ->
-            SporeCoroutines.launch { handler(event) }
+            SporeCoroutines.launch { runDebugSuspending("event.${type.simpleName}") { handler(event) } }
         }
     }
 
@@ -83,8 +91,8 @@ object SporeEvents {
         if (!Cancellable::class.java.isAssignableFrom(type)) return
 
         Logger.warn(
-            "A suspending handler is attached to ${type.simpleName}, which is cancellable - " +
-                "it cannot cancel the event, because the event completes before the handler does"
+            "A suspending handler is attached to ${type.simpleName}, which is cancellable " +
+                "It cannot cancel the event, because the event completes before the handler does"
         )
     }
 

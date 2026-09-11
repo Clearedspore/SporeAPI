@@ -1,5 +1,7 @@
 package me.clearedSpore.sporeAPI.serialization.codec
 
+import me.clearedSpore.sporeAPI.debug.model.Severity
+import me.clearedSpore.sporeAPI.debug.runDebug
 import me.clearedSpore.sporeAPI.serialization.SporeCodec
 import org.bukkit.Bukkit
 import org.bukkit.inventory.Inventory
@@ -25,8 +27,8 @@ class InventoryCodec : SporeCodec<Inventory> {
         return Base64.getEncoder().encodeToString(out.toByteArray())
     }
 
-    override fun decode(data: String): Inventory? {
-        return try {
+    override fun decode(data: String): Inventory? =
+        runDebug("serialization.decode", Severity.WARNING, mapOf("type" to "Inventory")) {
             val input = ByteArrayInputStream(Base64.getDecoder().decode(data))
 
             BukkitObjectInputStream(input).use {
@@ -41,8 +43,5 @@ class InventoryCodec : SporeCodec<Inventory> {
 
                 inv
             }
-        } catch (e: Exception) {
-            null
         }
-    }
 }

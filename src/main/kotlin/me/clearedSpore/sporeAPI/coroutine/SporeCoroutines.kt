@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.coroutine
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +11,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
@@ -44,9 +46,14 @@ object SporeCoroutines {
     lateinit var scope: CoroutineScope
         private set
 
+    // Without this, a launched coroutine that throws only reaches the thread's default handler.
+    private val incidents = CoroutineExceptionHandler { _, throwable ->
+        IncidentReporter.report("coroutine.uncaught", throwable)
+    }
+
     fun init(plugin: JavaPlugin) {
         main = BukkitMainDispatcher(plugin)
-        scope = CoroutineScope(SupervisorJob() + main + CoroutineName(plugin.name))
+        scope = CoroutineScope(SupervisorJob() + main + CoroutineName(plugin.name) + incidents)
     }
 
     fun shutdown() {

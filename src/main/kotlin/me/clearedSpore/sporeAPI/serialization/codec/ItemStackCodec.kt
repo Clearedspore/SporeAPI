@@ -1,5 +1,7 @@
 package me.clearedSpore.sporeAPI.serialization.codec
 
+import me.clearedSpore.sporeAPI.debug.model.Severity
+import me.clearedSpore.sporeAPI.debug.runDebug
 import me.clearedSpore.sporeAPI.serialization.SporeCodec
 import org.bukkit.inventory.ItemStack
 import org.bukkit.util.io.BukkitObjectInputStream
@@ -18,14 +20,11 @@ class ItemStackCodec : SporeCodec<ItemStack> {
         return Base64.getEncoder().encodeToString(out.toByteArray())
     }
 
-    override fun decode(data: String): ItemStack? {
-        return try {
+    override fun decode(data: String): ItemStack? =
+        runDebug("serialization.decode", Severity.WARNING, mapOf("type" to "ItemStack")) {
             val input = ByteArrayInputStream(Base64.getDecoder().decode(data))
             BukkitObjectInputStream(input).use {
                 it.readObject() as? ItemStack
             }
-        } catch (e: Exception) {
-            null
         }
-    }
 }

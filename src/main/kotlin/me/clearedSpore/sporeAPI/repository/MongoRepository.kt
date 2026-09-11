@@ -6,7 +6,7 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
 import me.clearedSpore.sporeAPI.debug.blockingIo
-import me.clearedSpore.sporeAPI.util.Logger
+import me.clearedSpore.sporeAPI.debug.runDebug
 import org.bson.Document
 
 // Copyright (c) 2025 ClearedSpore
@@ -28,34 +28,34 @@ abstract class MongoRepository<V : Any>(
     abstract fun fromDocument(document: Document): V?
 
     override fun findBlocking(id: String): V? = blockingIo("$collectionName.find") {
-        runCatching { collection.find(Filters.eq(idField, id)).first()?.let(::fromDocument) }
-            .onFailure { Logger.error("Failed to load $collectionName '$id': ${it.message}") }
-            .getOrNull()
+        runDebug("$collectionName.find", details = mapOf("id" to id)) {
+            collection.find(Filters.eq(idField, id)).first()?.let(::fromDocument)
+        }
     }
 
     override fun findAllBlocking(): List<V> = blockingIo("$collectionName.findAll") {
-        runCatching { collection.find().mapNotNull(::fromDocument) }
-            .onFailure { Logger.error("Failed to load $collectionName: ${it.message}") }
-            .getOrDefault(emptyList())
+        runDebug("$collectionName.findAll") {
+            collection.find().mapNotNull(::fromDocument)
+        } ?: emptyList()
     }
 
     override fun existsBlocking(id: String): Boolean = blockingIo("$collectionName.exists") {
-        runCatching { collection.countDocuments(Filters.eq(idField, id)) > 0 }
-            .onFailure { Logger.error("Failed to check $collectionName '$id': ${it.message}") }
-            .getOrDefault(false)
+        runDebug("$collectionName.exists", details = mapOf("id" to id)) {
+            collection.countDocuments(Filters.eq(idField, id)) > 0
+        } ?: false
     }
 
     override fun saveBlocking(value: V) {
         val id = idOf(value)
 
         blockingIo("$collectionName.save") {
-            runCatching {
+            runDebug("$collectionName.save", details = mapOf("id" to id)) {
                 collection.replaceOne(
                     Filters.eq(idField, id),
                     toDocument(value),
                     ReplaceOptions().upsert(true)
                 )
-            }.onFailure { Logger.error("Failed to save $collectionName '$id': ${it.message}") }
+            }
         }
     }
 
@@ -77,15 +77,17 @@ abstract class MongoRepository<V : Any>(
         if (models.isEmpty()) return
 
         blockingIo("$collectionName.saveAll") {
-            runCatching { collection.bulkWrite(models, BulkWriteOptions().ordered(false)) }
-                .onFailure { Logger.error("Failed to save ${models.size} $collectionName: ${it.message}") }
+            runDebug("$collectionName.saveAll", details = mapOf("count" to models.size.toString())) {
+                collection.bulkWrite(models, BulkWriteOptions().ordered(false))
+            }
         }
     }
 
     override fun deleteBlocking(id: String) {
         blockingIo("$collectionName.delete") {
-            runCatching { collection.deleteOne(Filters.eq(idField, id)) }
-                .onFailure { Logger.error("Failed to delete $collectionName '$id': ${it.message}") }
+            runDebug("$collectionName.delete", details = mapOf("id" to id)) {
+                collection.deleteOne(Filters.eq(idField, id))
+            }
         }
     }
 }

@@ -4,6 +4,8 @@ import io.papermc.paper.scoreboard.numbers.NumberFormat
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines.launchAsync
 import me.clearedSpore.sporeAPI.coroutine.withRunCtx
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.debug.model.Severity
 import me.clearedSpore.sporeAPI.event.on
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.Logger
@@ -19,6 +21,7 @@ import org.bukkit.scoreboard.Scoreboard
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.cancellation.CancellationException
 
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
@@ -57,7 +60,7 @@ object SidebarManager {
 
         if (!canTakeOver(player)) {
             Logger.warn(
-                "Not showing a sidebar to ${player.name} - another plugin already owns their " +
+                "Not showing a sidebar to ${player.name}. Another plugin already owns their " +
                     "scoreboard. Set SidebarManager.takeOverExisting = true to override."
             )
             return
@@ -188,8 +191,13 @@ object SidebarManager {
                             update()
                         }
                     }
-                } catch (ex: Throwable) {
-                    Logger.warn("Sidebar fetch failed for ${player.name}: $ex")
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (ex: Exception) {
+                    IncidentReporter.report(
+                        "sidebar.fetch", ex, Severity.WARNING,
+                        mapOf("player" to player.name, "sidebar" to sidebar.javaClass.simpleName)
+                    )
                 } finally {
                     fetching.set(false)
                 }

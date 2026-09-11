@@ -40,7 +40,7 @@ object SporeDebug {
     private const val TRACE_DEPTH = 6
 
     @Volatile
-    var mainThreadIoPolicy: MainThreadIoPolicy = MainThreadIoPolicy.WARN
+    var mainThreadIoPolicy: MainThreadIoPolicy = MainThreadIoPolicy.IGNORE
 
     @Volatile
     var phase: LifecyclePhase = LifecyclePhase.STARTING

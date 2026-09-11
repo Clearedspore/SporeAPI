@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.registry
 
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
 import me.clearedSpore.sporeAPI.scan.SporeScanner
 import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.plugin.java.JavaPlugin
@@ -100,8 +101,7 @@ abstract class Registry<T : Any>(
             } catch (exception: DuplicateRegistrationException) {
                 throw exception
             } catch (exception: Exception) {
-                Logger.error("Failed to register ${clazz.simpleName}: ${exception.message}")
-                exception.printStackTrace()
+                IncidentReporter.report("registry.$name.register", exception, details = mapOf("class" to clazz.name))
             }
         }
 

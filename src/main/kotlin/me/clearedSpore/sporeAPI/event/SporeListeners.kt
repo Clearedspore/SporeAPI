@@ -1,7 +1,12 @@
 package me.clearedSpore.sporeAPI.event
 
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import me.clearedSpore.sporeAPI.SporeApi
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.debug.DebugContext
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.debug.model.Severity
 import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.Bukkit
 import org.bukkit.event.Event
@@ -11,6 +16,7 @@ import org.bukkit.plugin.EventExecutor
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import kotlin.coroutines.Continuation
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -22,24 +28,21 @@ import kotlin.coroutines.suspendCoroutine
 
 object SporeListeners {
 
+    // Every handler goes through registerMethod instead of Bukkit's registerEvents, so one that
+    // throws becomes an incident rather than Bukkit's "Could not pass event" dump.
     fun register(listener: Listener) {
-        val methods = handlerMethods(listener.javaClass)
-
-        if (methods.none { it.isSuspending() }) {
-            Bukkit.getPluginManager().registerEvents(listener, SporeApi.plugin)
-            return
-        }
-
-        methods.forEach { method -> registerMethod(listener, method) }
+        handlerMethods(listener.javaClass).forEach { method -> registerMethod(listener, method) }
     }
 
     private fun handlerMethods(type: Class<*>): List<Method> {
         val methods = mutableListOf<Method>()
+        val seen = mutableSetOf<String>()
         var current: Class<*>? = type
 
         while (current != null && current != Any::class.java) {
             current.declaredMethods
-                .filter { it.isAnnotationPresent(EventHandler::class.java) }
+                .filter { it.isAnnotationPresent(EventHandler::class.java) && !it.isBridge && !it.isSynthetic }
+                .filter { seen.add(it.name + it.parameterTypes.contentToString()) }
                 .forEach { methods += it }
 
             current = current.superclass
@@ -92,7 +95,7 @@ object SporeListeners {
 
     private fun invokeDirect(method: Method, listener: Listener, event: Event) {
         try {
-            method.invoke(listener, event)
+            DebugContext.inside(operation(method, listener)) { method.invoke(listener, event) }
         } catch (exception: InvocationTargetException) {
             report(method, listener, exception.cause ?: exception)
         } catch (exception: Exception) {
@@ -102,23 +105,35 @@ object SporeListeners {
 
     private suspend fun invokeSuspending(method: Method, listener: Listener, event: Event) {
         try {
-            suspendCoroutine<Any?> { continuation ->
-                val result = try {
-                    method.invoke(listener, event, continuation)
-                } catch (exception: InvocationTargetException) {
-                    continuation.resumeWithException(exception.cause ?: exception)
-                    return@suspendCoroutine
-                }
+            DebugContext.insideSuspending(operation(method, listener)) {
+                suspendCoroutine<Any?> { continuation ->
+                    val result = try {
+                        method.invoke(listener, event, continuation)
+                    } catch (exception: InvocationTargetException) {
+                        continuation.resumeWithException(exception.cause ?: exception)
+                        return@suspendCoroutine
+                    }
 
-                if (result !== COROUTINE_SUSPENDED) continuation.resume(result)
+                    if (result !== COROUTINE_SUSPENDED) continuation.resume(result)
+                }
             }
+        } catch (cancelled: CancellationException) {
+            if (!currentCoroutineContext().isActive) throw cancelled
+            report(method, listener, cancelled)
         } catch (exception: Exception) {
             report(method, listener, exception)
         }
     }
 
+    private fun operation(method: Method, listener: Listener): String =
+        "listener.${listener.javaClass.simpleName}.${method.name}"
+
     private fun report(method: Method, listener: Listener, throwable: Throwable) {
-        Logger.error("${listener.javaClass.simpleName}.${method.name} threw: ${throwable.message}")
-        throwable.printStackTrace()
+        IncidentReporter.report(
+            operation = operation(method, listener),
+            error = throwable,
+            severity = Severity.ERROR,
+            details = mapOf("event" to (method.parameterTypes.firstOrNull()?.simpleName ?: "unknown"))
+        )
     }
 }

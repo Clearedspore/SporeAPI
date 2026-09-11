@@ -10,8 +10,10 @@ import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
 import me.clearedSpore.sporeAPI.command.cloud.SporeCloudCommandManager
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
 import me.clearedSpore.sporeAPI.debug.LifecyclePhase
 import me.clearedSpore.sporeAPI.debug.SporeDebug
+import me.clearedSpore.sporeAPI.dialog.SporeDialogs
 import me.clearedSpore.sporeAPI.event.SporeListeners
 import me.clearedSpore.sporeAPI.scan.SporeScanner
 import me.clearedSpore.sporeAPI.scoreboard.SidebarManager
@@ -131,13 +133,17 @@ open class SporePlugin : JavaPlugin() {
         var moduleCount = 0
 
         modules.forEach { module ->
+            val name = module.javaClass.simpleName
+
             module.getCommands().forEach { command ->
                 try {
                     commandManager.registerCommand(command)
                     moduleCount++
                 } catch (e: Exception) {
-                    Logger.error("Failed to register module command ${command.javaClass.simpleName}")
-                    e.printStackTrace()
+                    IncidentReporter.report(
+                        "module.registerCommand", e,
+                        details = mapOf("module" to name, "command" to command.javaClass.simpleName)
+                    )
                 }
             }
 
@@ -146,8 +152,10 @@ open class SporePlugin : JavaPlugin() {
                     cloudCommandManager.register(command)
                     moduleCount++
                 } catch (e: Exception) {
-                    Logger.error("Failed to register module cloud command ${command.javaClass.simpleName}")
-                    e.printStackTrace()
+                    IncidentReporter.report(
+                        "module.registerCloudCommand", e,
+                        details = mapOf("module" to name, "command" to command.javaClass.simpleName)
+                    )
                 }
             }
 
@@ -155,14 +163,12 @@ open class SporePlugin : JavaPlugin() {
                 SporeListeners.register(it)
             }
 
-            val name = module.javaClass.simpleName
             try {
                 Logger.info("Enabling module $name...")
                 module.onEnable()
                 Logger.info("Module $name enabled.")
             } catch (e: Exception) {
-                Logger.error("Failed to enable module $name")
-                e.printStackTrace()
+                IncidentReporter.report("module.enable", e, details = mapOf("module" to name))
             }
         }
 
@@ -179,6 +185,7 @@ open class SporePlugin : JavaPlugin() {
 
     final override fun onDisable() {
         SporeDebug.phase = LifecyclePhase.STOPPING
+        SporeDialogs.shutdown()
         SidebarManager.shutdown()
         Logger.info("Shutting down scheduler...")
         SporeScheduler.shutdown()
@@ -196,8 +203,7 @@ open class SporePlugin : JavaPlugin() {
                 it.onDisable()
                 Logger.info("Module $name disabled.")
             } catch (e: Exception) {
-                Logger.error("Failed to disable module $name")
-                e.printStackTrace()
+                IncidentReporter.report("module.disable", e, details = mapOf("module" to name))
             }
         }
 
@@ -232,8 +238,7 @@ open class SporePlugin : JavaPlugin() {
                 }
 
             } catch (e: Exception) {
-                Logger.error("Failed to register command ${clazz.simpleName}")
-                e.printStackTrace()
+                IncidentReporter.report("command.register", e, details = mapOf("class" to clazz.name))
             }
         }
 
@@ -271,8 +276,7 @@ open class SporePlugin : JavaPlugin() {
                 count++
 
             } catch (e: Exception) {
-                Logger.error("Failed to register listener ${clazz.simpleName}")
-                e.printStackTrace()
+                IncidentReporter.report("listener.register", e, details = mapOf("class" to clazz.name))
             }
         }
 
