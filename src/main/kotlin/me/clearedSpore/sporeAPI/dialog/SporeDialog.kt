@@ -17,6 +17,8 @@ abstract class SporeDialog {
     open fun onClose(player: Player, reason: DialogCloseReason) {}
 
     fun open(player: Player) = SporeDialogs.open(player, this)
+
+    fun line(label: String, value: String) = "<s_blue>$label: <white>$value"
 }
 
 class DialogClick internal constructor(

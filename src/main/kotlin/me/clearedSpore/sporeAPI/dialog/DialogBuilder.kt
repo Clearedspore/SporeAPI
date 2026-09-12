@@ -68,11 +68,12 @@ class DialogBuilder internal constructor() {
         externalTitle = text.mm()
     }
 
-    fun message(text: String, width: Int = 200) = message(text.mm(), width)
+    fun message(text: String, width: Int = 300) = message(text.mm(), width)
 
-    fun message(text: Component, width: Int = 200) {
+    fun message(text: Component, width: Int = 300) {
         body += DialogBody.plainMessage(text, width)
     }
+
 
     fun item(
         item: ItemStack,
