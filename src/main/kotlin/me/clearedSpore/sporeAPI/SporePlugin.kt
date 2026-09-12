@@ -185,11 +185,13 @@ open class SporePlugin : JavaPlugin() {
 
     final override fun onDisable() {
         SporeDebug.phase = LifecyclePhase.STOPPING
+
+        SporeCoroutines.shutdown()
+
         SporeDialogs.shutdown()
         SidebarManager.shutdown()
         Logger.info("Shutting down scheduler...")
         SporeScheduler.shutdown()
-        SporeCoroutines.shutdown()
         Logger.info("Cancelling all tasks...")
         ActionBar.stop()
         Tasks.cancelAll()

@@ -2,13 +2,17 @@ package me.clearedSpore.sporeAPI.command.cloud
 
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import me.clearedSpore.sporeAPI.SporePlugin
+import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
+import me.clearedSpore.sporeAPI.debug.IncidentReporter
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.incendo.cloud.annotations.AnnotationParser
 import org.incendo.cloud.bukkit.parser.selector.MultiplePlayerSelectorParser
+import org.incendo.cloud.exception.CommandExecutionException
 import org.incendo.cloud.exception.InjectionException
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.injection.ParameterInjector
+import org.incendo.cloud.kotlin.coroutines.annotations.installCoroutineSupport
 import org.incendo.cloud.paper.PaperCommandManager
 
 // Copyright (c) 2025 ClearedSpore
@@ -40,8 +44,21 @@ class SporeCloudCommandManager(
             ParameterInjector { context, _ -> context.sender().sender as? Player }
         )
 
+        annotationParser.installCoroutineSupport(
+            scope = SporeCoroutines.scope,
+            onlyForSuspending = true
+        )
+
         manager.exceptionController().registerHandler(InjectionException::class.java) { ctx ->
             ctx.context().sender().sender.sendMessage("§cOnly players can run this command.")
+        }
+
+        manager.exceptionController().registerHandler(CommandExecutionException::class.java) { ctx ->
+            IncidentReporter.report(
+                "command.cloud",
+                ctx.exception().cause ?: ctx.exception()
+            )
+            ctx.context().sender().sender.sendMessage("§cAn internal error occurred while running that command.")
         }
     }
 

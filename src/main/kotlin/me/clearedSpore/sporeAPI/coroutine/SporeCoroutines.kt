@@ -12,7 +12,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.Bukkit
+import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import kotlin.coroutines.CoroutineContext
@@ -20,44 +22,61 @@ import kotlin.coroutines.CoroutineContext
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
-class BukkitMainDispatcher(private val plugin: Plugin) : CoroutineDispatcher() {
+class BukkitMainDispatcher : CoroutineDispatcher() {
+
+    @Volatile
+    private var plugin: Plugin? = null
+
+    internal fun bind(plugin: Plugin) {
+        this.plugin = plugin
+    }
 
     override fun isDispatchNeeded(context: CoroutineContext): Boolean = !Bukkit.isPrimaryThread()
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
-        if (!plugin.isEnabled) {
-            block.run()
+        val plugin = this.plugin
+
+        if (plugin == null || !plugin.isEnabled) {
+            runIfOnMainThread(block)
             return
         }
 
-        Bukkit.getScheduler().runTask(plugin, block)
+        try {
+            Bukkit.getScheduler().runTask(plugin, block)
+        } catch (rejected: IllegalPluginAccessException) {
+            runIfOnMainThread(block)
+        }
     }
 
-    override fun toString(): String = "Bukkit.main"
+    private fun runIfOnMainThread(block: Runnable) {
+        if (Bukkit.isPrimaryThread()) {
+            block.run()
+        } else {
+            Logger.warn("Dropped a main-thread continuation: plugin is disabled")
+        }
+    }
+
+    override fun toString(): String = "Bukkit.main(${plugin?.name ?: "unbound"})"
 }
 
 object SporeCoroutines {
 
-    lateinit var main: CoroutineDispatcher
-        private set
+    val main: BukkitMainDispatcher = BukkitMainDispatcher()
 
     val async: CoroutineDispatcher = Dispatchers.IO
 
-    lateinit var scope: CoroutineScope
-        private set
-
-    // Without this, a launched coroutine that throws only reaches the thread's default handler.
     private val incidents = CoroutineExceptionHandler { _, throwable ->
         IncidentReporter.report("coroutine.uncaught", throwable)
     }
 
+    val scope: CoroutineScope =
+        CoroutineScope(SupervisorJob() + main + CoroutineName("SporeAPI") + incidents)
+
     fun init(plugin: JavaPlugin) {
-        main = BukkitMainDispatcher(plugin)
-        scope = CoroutineScope(SupervisorJob() + main + CoroutineName(plugin.name) + incidents)
+        main.bind(plugin)
     }
 
     fun shutdown() {
-        if (!::scope.isInitialized) return
         scope.cancel("Plugin is disabling")
     }
 

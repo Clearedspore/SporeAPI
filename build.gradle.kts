@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "9.7"
+version = "9.8"
 
 repositories {
     mavenCentral()
@@ -30,10 +30,16 @@ dependencies {
     implementation("xyz.xenondevs.invui:invui:2.3.0")
     implementation("xyz.xenondevs.invui:invui-kotlin:2.3.0")
 
-    implementation("org.incendo:cloud-core:2.0.0")
-    implementation("org.incendo:cloud-annotations:2.0.0")
-    implementation("org.incendo:cloud-paper:2.0.0")
-    implementation("org.incendo:cloud-brigadier:2.0.0")
+    implementation(platform("org.incendo:cloud-bom:2.1.0"))
+    implementation(platform("org.incendo:cloud-minecraft-bom:2.0.0"))
+
+    implementation("org.incendo:cloud-core")
+    implementation("org.incendo:cloud-annotations")
+    implementation("org.incendo:cloud-paper")
+    implementation("org.incendo:cloud-brigadier")
+    implementation("org.incendo:cloud-kotlin-coroutines-annotations")
+
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.4.0")
 
     compileOnly("com.github.ben-manes.caffeine:caffeine:3.2.2")
 
