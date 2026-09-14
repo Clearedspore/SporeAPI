@@ -433,6 +433,21 @@ BossBarManager.add(bar)
 
 The bar will automatically show for players with the permission, update itself, and get removed once it's done. You can also remove it early with `BossBarManager.remove(bar.id)`.
 
+If a bar should only be seen by certain players, use `viewer(player)` for a single player or `viewerCondition { player -> ... }` for your own check. You can change a bar while it's showing with `updateText`, `updateProgress` and `updateColor` (or just set `bar.color` / `bar.style`).
+
+```kotlin
+val bar = BossBarBuilder()
+    .text("<green>Only you can see this".mm())
+    .viewer(player)
+    .build()
+
+BossBarManager.add(bar)
+bar.updateText("<red>Now it's red".mm())
+bar.updateColor(BarColor.RED)
+```
+
+Text can be a MiniMessage `Component` (via `.mm()`) or a legacy string (via `.translate()`).
+
 ---
 
 # Chat input
