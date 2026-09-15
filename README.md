@@ -79,6 +79,15 @@ It supports `&` color codes, `&#RRGGBB` hex color codes, and MiniMessage tags.
 
 There are also a few pre-made color methods you can use such as `.blue()`, `.white()`, `.red()`, `.green()`, `.gold()`, and more.
 
+## Legacy text to MiniMessage
+
+Text that comes from other plugins - LuckPerms prefixes, nicknames, config values - is often written with `&` color codes (including `&#RRGGBB` hex). If you drop that straight into a `.mm()` string, the codes show up as literal text. Convert it first with `.legacyToMiniMessage()`:
+
+```kotlin
+val prefix = luckPermsPrefix.legacyToMiniMessage()   // "&c[Admin] " -> "<red>[Admin] "
+player.sendMessage("$prefix<white>${player.name}".mm())
+```
+
 ## Message utility
 
 There are many utility methods for sending messages.
@@ -566,6 +575,26 @@ From anywhere else, use `SporeDialogs.close(player)`, `SporeDialogs.isOpen(playe
 
 `onClose { reason -> }`, or overriding `onClose` in a class, tells you why it closed: `BUTTON`, `EXIT` (the exit button, "no", or Escape), `CLOSED`, `REPLACED` or `QUIT`. Open dialogs are closed when your plugin disables, and errors in your handlers show up as [incidents](#incidents).
 
+## Loading dialogs
+
+Some dialogs need data first - a player's profile from the database, a page of punishments. `openLoaded` shows a loading dialog straight away, runs your loader in a coroutine, and swaps in the real dialog once it's done:
+
+```kotlin
+openLoaded(viewer, "<s_blue>$name", "<gray>Loading <white>$name</white>...", "profile.open", back = { LookupDialog() }) {
+    val user = withAsyncCtx { UserRepository.findBlocking(uuid.toString()) }
+        ?: return@openLoaded noticeDialog("<s_blue>$name", "<s_red>Couldn't load $name's data.") { LookupDialog() }
+
+    ProfileDialog(user)
+}
+```
+
+- The loader starts on the main thread, so do your database work in `withAsyncCtx` (or through a `SuspendCache`).
+- If the player clicks **Cancel**, closes the dialog, opens something else or leaves before it finishes, the result is thrown away instead of popping up over whatever they're doing now.
+- If the loader throws, it becomes an [incident](#incidents) under `operation`, and the player gets a notice with the ref.
+- `back` is where Cancel and the error notice take the player. Leave it out and they just close the dialog.
+
+`noticeDialog(title, text) { back }` is the small "message + one button" dialog it uses for errors. It's handy on its own for "No access" or "Not found" screens.
+
 ---
 
 # Commands and listeners
@@ -728,6 +757,24 @@ SporeCoroutines.launch {
 
 The main dispatcher only actually schedules a task when it has to - if you're already on the server thread, `withRunCtx` runs your block inline.
 
+## Caching suspend loads
+
+When a value is expensive to load - a database page, a stats query, a permission lookup - and gets asked for a lot, `SuspendCache` keeps the result around for a while so you don't hit the database every time.
+
+```kotlin
+private val cache = SuspendCache<UUID, Stats>(Duration.ofMinutes(1), maximumSize = 5_000)
+
+suspend fun stats(uuid: UUID): Stats = cache.get(uuid) { StatsRepository.loadBlocking(uuid) }.value
+```
+
+The loader runs off the main thread, so it's fine to call blocking code in it. A few things it handles for you:
+
+- **One load per key.** If ten players open the same page at once, the loader runs once and they all get the same result.
+- **Invalidation wins.** `invalidate(key)` or `invalidateAll()` throws away a load that was still running, so a stale result can't sneak back into the cache after you changed the data.
+- **You know how old it is.** `get` returns a `Cached<V>` with the `value` and `loadedAt`, handy for an "updated 30s ago" line.
+
+Entries expire after the `ttl`, and the cache never holds more than `maximumSize` entries.
+
 ---
 
 # Scoreboards
@@ -877,6 +924,17 @@ if (sender.withCooldown("mine_ability", 10)) {
 }
 ```
 
+Expired cooldowns aren't removed on their own - they don't do anything, they just sit in memory. Call `Cooldown.cleanup()` whenever you want to clear them out, for example from a repeating task. To end one player's cooldown early, use `Cooldown.removeCooldown(id, uuid)`.
+
+If you only need a cooldown inside one class (anti-spam on a toggle, a pay command), `CooldownMap` is simpler - its entries expire by themselves, and you can wipe it with `clear()`:
+
+```kotlin
+private val payCooldown = CooldownMap<UUID>(15, TimeUnit.SECONDS)
+
+if (payCooldown.isOnCooldown(player.uniqueId)) return
+payCooldown.add(player.uniqueId)
+```
+
 ---
 
 # Confirmations
@@ -985,13 +1043,15 @@ fun loadSettings(): Settings = blockingIo("settings.load") {
 }
 ```
 
-If that runs on the server thread you get a warning with a stack trace pointing at the caller. Repeats of the same operation are collapsed so one bad call in a loop can't spam your console.
+The guard is **off by default** (`IGNORE`). It's meant for server admins tracking down lag: they turn it on with `/mycommand debug io` (see [Commands](#commands-1)) without a restart, and turn it off again once they're done.
+
+While it's on, a wrapped call that runs on the server thread logs a warning with a stack trace pointing at the caller. Repeats of the same operation are collapsed so one bad call in a loop can't spam your console.
 
 ```kotlin
-SporeDebug.mainThreadIoPolicy = MainThreadIoPolicy.THROW   // WARN (default), IGNORE, THROW
+SporeDebug.mainThreadIoPolicy = MainThreadIoPolicy.THROW   // IGNORE (default), WARN, THROW
 ```
 
-`THROW` is worth turning on in development - it fails loudly the first time instead of leaving you to notice the lag later. Startup and shutdown are exempt by default, since blocking there is usually deliberate; set `SporeDebug.reportDuringLifecycle = true` if you want those too.
+Setting it in code is for development - `THROW` fails loudly the first time instead of leaving you to notice the lag later. Startup and shutdown are exempt by default, since blocking there is usually deliberate; set `SporeDebug.reportDuringLifecycle = true` if you want those too.
 
 ## Incidents
 

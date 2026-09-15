@@ -4,6 +4,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import me.clearedSpore.sporeAPI.SporePlugin
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.util.CC.mm
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.incendo.cloud.annotations.AnnotationParser
@@ -50,7 +51,7 @@ class SporeCloudCommandManager(
         )
 
         manager.exceptionController().registerHandler(InjectionException::class.java) { ctx ->
-            ctx.context().sender().sender.sendMessage("§cOnly players can run this command.")
+            ctx.context().sender().sender.sendMessage("<s_red>Only players can run this command.".mm())
         }
 
         manager.exceptionController().registerHandler(CommandExecutionException::class.java) { ctx ->
@@ -58,7 +59,7 @@ class SporeCloudCommandManager(
                 "command.cloud",
                 ctx.exception().cause ?: ctx.exception()
             )
-            ctx.context().sender().sender.sendMessage("§cAn internal error occurred while running that command.")
+            ctx.context().sender().sender.sendMessage("<s_red>An internal error occurred while running that command.".mm())
         }
     }
 

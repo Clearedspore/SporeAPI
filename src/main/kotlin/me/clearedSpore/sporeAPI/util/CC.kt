@@ -35,6 +35,11 @@ object CC {
         .useUnusualXRepeatedCharacterHexFormat()
         .build()
 
+    private val ampersandSerializer = LegacyComponentSerializer.builder()
+        .character('&')
+        .hexColors()
+        .build()
+
     private val LEGACY_TAGS: Map<Char, String> = mapOf(
         '0' to "black", '1' to "dark_blue", '2' to "dark_green", '3' to "dark_aqua",
         '4' to "dark_red", '5' to "dark_purple", '6' to "gold", '7' to "gray",
@@ -46,6 +51,11 @@ object CC {
     fun String.mm(): Component {
         return miniMessage.deserialize(this)
             .decoration(TextDecoration.ITALIC, false)
+    }
+
+    fun String.legacyToMiniMessage(): String {
+        val component = ampersandSerializer.deserialize(this)
+        return MiniMessage.miniMessage().serialize(component)
     }
 
     fun String.translate(): String {
