@@ -148,9 +148,6 @@ class Webhook(private val webhookURL: String) {
     }
 
 
-
-    private fun escape(text: String) = text.replace("\"", "\\\"")
-
     class Embed {
         private var title: String? = null
         private var description: String? = null
@@ -180,19 +177,19 @@ class Webhook(private val webhookURL: String) {
 
         fun toJson(): String {
             val builder = StringBuilder("{")
-            title?.let { builder.append("\"title\":\"${it.replace("\"", "\\\"")}\",") }
-            description?.let { builder.append("\"description\":\"${it.replace("\"", "\\\"")}\",") }
+            title?.let { builder.append("\"title\":\"${escape(it)}\",") }
+            description?.let { builder.append("\"description\":\"${escape(it)}\",") }
             color?.let { builder.append("\"color\":$it,") }
             if (author != null) {
-                builder.append("\"author\":{\"name\":\"${author!!.replace("\"", "\\\"")}\"")
-                authorIcon?.let { builder.append(",\"icon_url\":\"${it.replace("\"", "\\\"")}\"") }
+                builder.append("\"author\":{\"name\":\"${escape(author!!)}\"")
+                authorIcon?.let { builder.append(",\"icon_url\":\"${escape(it)}\"") }
                 builder.append("},")
             }
-            thumbnail?.let { builder.append("\"thumbnail\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
-            image?.let { builder.append("\"image\":{\"url\":\"${it.replace("\"", "\\\"")}\"},") }
+            thumbnail?.let { builder.append("\"thumbnail\":{\"url\":\"${escape(it)}\"},") }
+            image?.let { builder.append("\"image\":{\"url\":\"${escape(it)}\"},") }
             if (footer != null) {
-                builder.append("\"footer\":{\"text\":\"${footer!!.replace("\"", "\\\"")}\"")
-                footerIcon?.let { builder.append(",\"icon_url\":\"${it.replace("\"", "\\\"")}\"") }
+                builder.append("\"footer\":{\"text\":\"${escape(footer!!)}\"")
+                footerIcon?.let { builder.append(",\"icon_url\":\"${escape(it)}\"") }
                 builder.append("},")
             }
             if (fields.isNotEmpty()) {
@@ -205,8 +202,23 @@ class Webhook(private val webhookURL: String) {
 
         class Field(private val name: String, private val value: String, private val inline: Boolean) {
             fun toJson(): String {
-                return """{"name":"${name.replace("\"","\\\"")}","value":"${value.replace("\"","\\\"")}","inline":$inline}"""
+                return """{"name":"${escape(name)}","value":"${escape(value)}","inline":$inline}"""
             }
+        }
+    }
+}
+
+private fun escape(text: String): String = buildString(text.length + 16) {
+    for (char in text) {
+        when (char) {
+            '"' -> append("\\\"")
+            '\\' -> append("\\\\")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            '\b' -> append("\\b")
+            '' -> append("\\f")
+            else -> if (char < ' ') append("\\u%04x".format(char.code)) else append(char)
         }
     }
 }
