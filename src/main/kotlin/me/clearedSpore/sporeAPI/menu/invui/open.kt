@@ -1,6 +1,8 @@
 package me.clearedSpore.sporeAPI.menu.invui
 
+import me.clearedSpore.sporeAPI.task.Tasks
 import net.kyori.adventure.text.Component
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.ItemStack
@@ -21,52 +23,64 @@ fun List<ItemStack>.toInvUI(): MutableList<Item> {
     return map { Item.simple(ItemBuilder(it)) }.toMutableList()
 }
 
+private fun runOnPlayer(player: Player, block: () -> Unit) {
+    if (Bukkit.isPrimaryThread()) block() else Tasks.runEntity(player, block)
+}
+
 fun Gui.open(player: Player, title: String, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
-    val builder = Window.builder()
-        .setUpperGui(this)
-        .setTitle(title)
+    runOnPlayer(player) {
+        val builder = Window.builder()
+            .setUpperGui(this)
+            .setTitle(title)
 
-    if (onClose != null) {
-        builder.addCloseHandler(onClose)
+        if (onClose != null) {
+            builder.addCloseHandler(onClose)
+        }
+
+        builder.open(player)
     }
-
-    builder.open(player)
 }
 
 fun Gui.open(player: Player, title: Component, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
-    val builder = Window.builder()
-        .setUpperGui(this)
-        .setTitle(title)
+    runOnPlayer(player) {
+        val builder = Window.builder()
+            .setUpperGui(this)
+            .setTitle(title)
 
-    if (onClose != null) {
-        builder.addCloseHandler(onClose)
+        if (onClose != null) {
+            builder.addCloseHandler(onClose)
+        }
+
+        builder.open(player)
     }
-
-    builder.open(player)
 }
 
 fun Gui.openSplit(player: Player, title: String, lower: Gui, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
-    val builder = Window.builder()
-        .setUpperGui(this)
-        .setLowerGui(lower)
-        .setTitle(title)
+    runOnPlayer(player) {
+        val builder = Window.builder()
+            .setUpperGui(this)
+            .setLowerGui(lower)
+            .setTitle(title)
 
-    if (onClose != null) {
-        builder.addCloseHandler(onClose)
+        if (onClose != null) {
+            builder.addCloseHandler(onClose)
+        }
+
+        builder.open(player)
     }
-
-    builder.open(player)
 }
 
 fun Gui.openSplit(player: Player, title: Component, lower: Gui, onClose: ((InventoryCloseEvent.Reason) -> Unit)? = null) {
-    val builder = Window.builder()
-        .setUpperGui(this)
-        .setLowerGui(lower)
-        .setTitle(title)
+    runOnPlayer(player) {
+        val builder = Window.builder()
+            .setUpperGui(this)
+            .setLowerGui(lower)
+            .setTitle(title)
 
-    if (onClose != null) {
-        builder.addCloseHandler(onClose)
+        if (onClose != null) {
+            builder.addCloseHandler(onClose)
+        }
+
+        builder.open(player)
     }
-
-    builder.open(player)
 }

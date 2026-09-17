@@ -2,6 +2,7 @@ package me.clearedSpore.sporeAPI.task
 
 import me.clearedSpore.sporeAPI.util.FoliaUtil
 import org.bukkit.Bukkit
+import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
@@ -103,6 +104,29 @@ object Tasks {
             entity.scheduler.runAtFixedRate(
                 instance, { runnable.run() }, retired, delayTicks.coerceAtLeast(1L), periodTicks.coerceAtLeast(1L)
             )?.toSpore() ?: SporeScheduledTask.NOOP
+        else
+            Bukkit.getScheduler().runTaskTimer(instance, runnable, delayTicks, periodTicks).toSpore()
+
+    fun runAtLocation(location: Location, runnable: Runnable): SporeScheduledTask =
+        if (FoliaUtil.isFolia)
+            Bukkit.getRegionScheduler().run(instance, location) { runnable.run() }.toSpore()
+        else
+            Bukkit.getScheduler().runTask(instance, runnable).toSpore()
+
+    fun runAtLocationLater(location: Location, delayTicks: Long, runnable: Runnable): SporeScheduledTask =
+        if (FoliaUtil.isFolia) {
+            if (delayTicks <= 0)
+                Bukkit.getRegionScheduler().run(instance, location) { runnable.run() }.toSpore()
+            else
+                Bukkit.getRegionScheduler().runDelayed(instance, location, { runnable.run() }, delayTicks).toSpore()
+        } else
+            Bukkit.getScheduler().runTaskLater(instance, runnable, delayTicks).toSpore()
+
+    fun runAtLocationTimer(location: Location, delayTicks: Long, periodTicks: Long, runnable: Runnable): SporeScheduledTask =
+        if (FoliaUtil.isFolia)
+            Bukkit.getRegionScheduler().runAtFixedRate(
+                instance, location, { runnable.run() }, delayTicks.coerceAtLeast(1L), periodTicks.coerceAtLeast(1L)
+            ).toSpore()
         else
             Bukkit.getScheduler().runTaskTimer(instance, runnable, delayTicks, periodTicks).toSpore()
 
