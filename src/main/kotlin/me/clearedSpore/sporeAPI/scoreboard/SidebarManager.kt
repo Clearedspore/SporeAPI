@@ -66,13 +66,18 @@ object SidebarManager {
             return
         }
 
-        val session = Session(player, sidebar)
-        sessions[player.uniqueId] = session
+        Tasks.run {
+            val session = Session(player, sidebar)
+            sessions[player.uniqueId] = session
 
-        player.scoreboard = session.board
-        session.refreshNow()
+            Tasks.runEntity(player, {
+                if (!player.isOnline) return@runEntity
+                player.scoreboard = session.board
+                session.refreshNow()
+            })
 
-        ensureRunning()
+            ensureRunning()
+        }
     }
 
     fun hide(player: Player) {
