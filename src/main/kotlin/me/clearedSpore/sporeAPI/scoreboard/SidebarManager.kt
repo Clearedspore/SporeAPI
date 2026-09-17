@@ -7,13 +7,13 @@ import me.clearedSpore.sporeAPI.coroutine.withRunCtx
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
 import me.clearedSpore.sporeAPI.debug.model.Severity
 import me.clearedSpore.sporeAPI.event.on
+import me.clearedSpore.sporeAPI.task.SporeScheduledTask
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.Logger
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.scheduler.BukkitTask
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import org.bukkit.scoreboard.Objective
@@ -38,7 +38,7 @@ object SidebarManager {
     private val sessions = ConcurrentHashMap<UUID, Session>()
 
     @Volatile
-    private var task: BukkitTask? = null
+    private var task: SporeScheduledTask? = null
 
     @Volatile
     private var listenerRegistered = false
@@ -120,7 +120,7 @@ object SidebarManager {
                 return@forEach
             }
 
-            session.tick()
+            Tasks.runEntity(session.player, { session.tick() })
         }
     }
 

@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.menu.item.Item
+import me.clearedSpore.sporeAPI.task.SporeScheduledTask
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.CC.red
 import org.bukkit.Bukkit
@@ -16,7 +17,6 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 // Copyright (c) 2025 ClearedSpore
@@ -32,7 +32,7 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
     var shouldReopen = false
 
     protected var autoRefreshOnClick = true
-    private var autoRefreshTask: BukkitRunnable? = null
+    private var autoRefreshTask: SporeScheduledTask? = null
     private var autoRefreshEnabled = true
 
     open val SPAM_MAX = 3
@@ -106,20 +106,16 @@ abstract class Menu(protected val plugin: JavaPlugin) : InventoryHolder, Listene
 
         if (!autoRefreshEnabled) return
 
-        autoRefreshTask = object : BukkitRunnable() {
-            override fun run() {
-                if (!::inventory.isInitialized) return
+        autoRefreshTask = Tasks.runTimer(20L, 20L) {
+            if (!::inventory.isInitialized) return@runTimer
 
-                if (inventory.viewers.isEmpty()) {
-                    cancel()
-                    return
-                }
-
-                refresh()
+            if (inventory.viewers.isEmpty()) {
+                stopAutoRefresh()
+                return@runTimer
             }
-        }
 
-        autoRefreshTask!!.runTaskTimer(plugin, 20L, 20L)
+            refresh()
+        }
     }
 
     fun stopAutoRefresh() {

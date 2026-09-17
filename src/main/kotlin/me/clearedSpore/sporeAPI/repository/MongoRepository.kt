@@ -59,12 +59,6 @@ abstract class MongoRepository<V : Any>(
         }
     }
 
-    /**
-     * One round trip for the whole batch instead of one per value.
-     *
-     * Matters most on the shutdown path, where saving every loaded value is unavoidably blocking:
-     * a hundred players is one bulk write rather than a hundred sequential ones.
-     */
     override fun saveAllBlocking(values: Iterable<V>) {
         val models = values.map { value ->
             ReplaceOneModel(

@@ -3,6 +3,7 @@ package me.clearedSpore.sporeAPI.debug
 import me.clearedSpore.sporeAPI.SporeApi
 import me.clearedSpore.sporeAPI.debug.model.Incident
 import me.clearedSpore.sporeAPI.debug.model.Severity
+import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.Bukkit
 import java.util.concurrent.ConcurrentHashMap
@@ -174,7 +175,7 @@ object IncidentReporter {
         val plugin = SporeApi.plugin
         when {
             isMainThread() -> send.run()
-            plugin.isEnabled -> Bukkit.getScheduler().runTask(plugin, send)
+            plugin.isEnabled -> Tasks.run(send)
         }
     }
 

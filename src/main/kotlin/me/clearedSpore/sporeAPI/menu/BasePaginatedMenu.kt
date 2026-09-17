@@ -1,6 +1,7 @@
 package me.clearedSpore.sporeAPI.menu
 
 import me.clearedSpore.sporeAPI.menu.item.Item
+import me.clearedSpore.sporeAPI.task.SporeScheduledTask
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.gray
@@ -21,7 +22,6 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
 import java.util.*
 
 abstract class BasePaginatedMenu(
@@ -60,7 +60,7 @@ abstract class BasePaginatedMenu(
     abstract fun createItems()
     protected abstract fun onInventoryClickEvent(clicker: Player, clickType: ClickType, event: InventoryClickEvent)
 
-    private var autoRefreshTask: BukkitRunnable? = null
+    private var autoRefreshTask: SporeScheduledTask? = null
     private var autoRefreshEnabled = true
 
     fun open(player: Player) {
@@ -102,9 +102,7 @@ abstract class BasePaginatedMenu(
         val player = event.player as Player
 
         if (shouldReopen) {
-            Tasks.run {
-                this.open(player)
-            }
+            Tasks.runEntity(player, { this.open(player) })
         }
 
         onClose(player)
@@ -118,15 +116,12 @@ abstract class BasePaginatedMenu(
         stopAutoRefresh()
         if (!autoRefreshEnabled) return
 
-        autoRefreshTask = object : BukkitRunnable() {
-            override fun run() {
-                if (!::inventory.isInitialized) return
-                if (inventory.viewers.isNotEmpty()) {
-                    inventory.viewers.filterIsInstance<Player>().forEach { refreshMenu(it) }
-                } else cancel()
-            }
+        autoRefreshTask = Tasks.runTimer(20L, 20L) {
+            if (!::inventory.isInitialized) return@runTimer
+            if (inventory.viewers.isNotEmpty()) {
+                inventory.viewers.filterIsInstance<Player>().forEach { refreshMenu(it) }
+            } else stopAutoRefresh()
         }
-        autoRefreshTask?.runTaskTimer(plugin, 20L, 20L)
     }
 
     fun stopAutoRefresh() {

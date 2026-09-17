@@ -1,13 +1,14 @@
 package me.clearedSpore.sporeAPI.task
 
-import org.bukkit.scheduler.BukkitTask
+import org.bukkit.entity.Entity
+
 // Copyright (c) 2025 ClearedSpore
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
 
 abstract class SporeTask {
 
-    private var task: BukkitTask? = null
+    private var task: SporeScheduledTask? = null
 
     abstract fun run()
 
@@ -34,6 +35,21 @@ abstract class SporeTask {
     fun startTimerAsync(delayTicks: Long, periodTicks: Long) {
         if (task != null) return
         task = Tasks.runTimerAsync(delayTicks, periodTicks) { run() }
+    }
+
+    fun startForEntity(entity: Entity) {
+        if (task != null) return
+        task = Tasks.runEntity(entity, { run() }, { task = null })
+    }
+
+    fun startLaterForEntity(entity: Entity, delayTicks: Long) {
+        if (task != null) return
+        task = Tasks.runEntityLater(entity, delayTicks, { run() }, { task = null })
+    }
+
+    fun startTimerForEntity(entity: Entity, delayTicks: Long, periodTicks: Long) {
+        if (task != null) return
+        task = Tasks.runEntityTimer(entity, delayTicks, periodTicks, { run() }, { task = null })
     }
 
     fun stop() {

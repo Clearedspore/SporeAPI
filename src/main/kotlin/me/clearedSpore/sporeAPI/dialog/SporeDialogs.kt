@@ -8,6 +8,7 @@ import io.papermc.paper.registry.data.dialog.action.DialogAction
 import me.clearedSpore.sporeAPI.SporeApi
 import me.clearedSpore.sporeAPI.debug.runDebug
 import me.clearedSpore.sporeAPI.event.on
+import me.clearedSpore.sporeAPI.task.Tasks
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
@@ -43,7 +44,7 @@ object SporeDialogs {
     }
 
     fun open(player: Player, dialog: SporeDialog) {
-        if (!Bukkit.isPrimaryThread()) return runOnMain { open(player, dialog) }
+        if (!Bukkit.isPrimaryThread()) return runOnMain(player) { open(player, dialog) }
         listen()
 
         val token = tokens.incrementAndGet()
@@ -55,7 +56,7 @@ object SporeDialogs {
     }
 
     fun reopen(player: Player) {
-        if (!Bukkit.isPrimaryThread()) return runOnMain { reopen(player) }
+        if (!Bukkit.isPrimaryThread()) return runOnMain(player) { reopen(player) }
 
         val session = sessions[player.uniqueId] ?: return
         val token = tokens.incrementAndGet()
@@ -67,7 +68,7 @@ object SporeDialogs {
     }
 
     fun close(player: Player) {
-        if (!Bukkit.isPrimaryThread()) return runOnMain { close(player) }
+        if (!Bukkit.isPrimaryThread()) return runOnMain(player) { close(player) }
 
         player.closeDialog()
         sessions.remove(player.uniqueId)?.let { finish(player, it, DialogCloseReason.CLOSED) }
@@ -114,7 +115,7 @@ object SporeDialogs {
         val id = key.value().substringAfterLast('/')
         val response = event.dialogResponseView
 
-        runOnMain { click(player, token, id, response) }
+        runOnMain(player) { click(player, token, id, response) }
     }
 
     private fun click(player: Player, token: Long, id: String, response: DialogResponseView?) {
@@ -159,11 +160,11 @@ object SporeDialogs {
         session.builder.closeHandlers.forEach { handler -> runDebug(operation, details = details) { handler(reason) } }
     }
 
-    private fun runOnMain(block: () -> Unit) {
+    private fun runOnMain(player: Player, block: () -> Unit) {
         if (Bukkit.isPrimaryThread()) return block()
 
         val plugin = SporeApi.plugin
-        if (plugin.isEnabled) Bukkit.getScheduler().runTask(plugin, Runnable { block() })
+        if (plugin.isEnabled) Tasks.runEntity(player, { block() })
     }
 
     private fun plain(component: Component): String = PlainTextComponentSerializer.plainText().serialize(component)

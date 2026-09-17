@@ -12,8 +12,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
+import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.Bukkit
+import org.bukkit.entity.Entity
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
@@ -42,7 +44,7 @@ class BukkitMainDispatcher : CoroutineDispatcher() {
         }
 
         try {
-            Bukkit.getScheduler().runTask(plugin, block)
+            Tasks.run(block)
         } catch (rejected: IllegalPluginAccessException) {
             runIfOnMainThread(block)
         }
@@ -57,6 +59,18 @@ class BukkitMainDispatcher : CoroutineDispatcher() {
     }
 
     override fun toString(): String = "Bukkit.main(${plugin?.name ?: "unbound"})"
+}
+
+
+class EntityDispatcher(private val entity: Entity) : CoroutineDispatcher() {
+
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean = true
+
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+        Tasks.runEntity(entity, block)
+    }
+
+    override fun toString(): String = "Bukkit.entity(${entity.uniqueId})"
 }
 
 object SporeCoroutines {
@@ -94,5 +108,8 @@ suspend fun <T> withAsyncCtx(block: suspend CoroutineScope.() -> T): T =
 
 suspend fun <T> withRunCtx(block: suspend CoroutineScope.() -> T): T =
     withContext(SporeCoroutines.main, block)
+
+suspend fun <T> withEntityCtx(entity: Entity, block: suspend CoroutineScope.() -> T): T =
+    withContext(EntityDispatcher(entity), block)
 
 suspend fun delayTicks(ticks: Long) = delay(ticks * 50L)

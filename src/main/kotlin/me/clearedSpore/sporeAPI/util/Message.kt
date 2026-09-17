@@ -1,5 +1,6 @@
 package me.clearedSpore.sporeAPI.util
 
+import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.CC.blue
 import me.clearedSpore.sporeAPI.util.CC.red
 import me.clearedSpore.sporeAPI.util.CC.translate
@@ -49,9 +50,9 @@ object Message {
         val bossBar = createBossBar(title, progress)
         bossBar.addPlayer(this.player!!)
 
-        Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+        Tasks.runEntityLater(this, duration, {
             bossBar.removePlayer(this.player!!)
-        }, duration)
+        })
     }
 
 

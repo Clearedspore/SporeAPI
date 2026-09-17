@@ -1,10 +1,10 @@
 package me.clearedSpore.sporeAPI.util
 
+import me.clearedSpore.sporeAPI.task.SporeScheduledTask
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.CC.translate
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.bukkit.scheduler.BukkitTask
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -23,7 +23,7 @@ object ActionBar {
     private const val SEPARATOR = " §7| "
     private const val DEFAULT_DURATION = 2000L
 
-    private var task: BukkitTask? = null
+    private var task: SporeScheduledTask? = null
 
     fun start() {
         if (task != null) return
@@ -77,6 +77,6 @@ object ActionBar {
 
 
     fun tick() {
-        for (player in Bukkit.getOnlinePlayers()) send(player)
+        for (player in Bukkit.getOnlinePlayers()) Tasks.runEntity(player, { send(player) })
     }
 }

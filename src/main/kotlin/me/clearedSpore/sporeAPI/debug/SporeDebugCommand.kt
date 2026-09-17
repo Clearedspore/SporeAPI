@@ -12,6 +12,7 @@ import me.clearedSpore.sporeAPI.registry.RegistryIndex
 import me.clearedSpore.sporeAPI.repository.SporeMongo
 import me.clearedSpore.sporeAPI.scoreboard.SidebarManager
 import me.clearedSpore.sporeAPI.util.CC.mm
+import me.clearedSpore.sporeAPI.util.FoliaUtil
 import me.clearedSpore.sporeAPI.util.Logger
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import net.kyori.adventure.text.event.ClickEvent
@@ -109,10 +110,16 @@ object SporeDebugCommand {
 
     private fun report(sender: CommandSender, root: String) {
         val plugin = SporeApi.plugin
-        val scheduler = Bukkit.getScheduler()
 
-        val pending = scheduler.pendingTasks.count { it.owner.name == plugin.name }
-        val workers = scheduler.activeWorkers.count { it.owner.name == plugin.name }
+        val schedulerLine = if (FoliaUtil.isFolia) {
+            "<white>Folia <gray>(per-region/entity/async schedulers)"
+        } else {
+            val scheduler = Bukkit.getScheduler()
+            val pending = scheduler.pendingTasks.count { it.owner.name == plugin.name }
+            val workers = scheduler.activeWorkers.count { it.owner.name == plugin.name }
+            "<white>$pending <gray>pending, <white>$workers <gray>async worker(s)"
+        }
+
         val coroutines = runCatching {
             SporeCoroutines.scope.coroutineContext.job.children.count()
         }.getOrDefault(0)
@@ -121,7 +128,7 @@ object SporeDebugCommand {
 
         lines += "<s_blue>${plugin.name} <white>debug"
         lines += ""
-        lines += "<gray>Scheduler: <white>$pending <gray>pending, <white>$workers <gray>async worker(s)"
+        lines += "<gray>Scheduler: $schedulerLine"
         lines += "<gray>Coroutines: <white>$coroutines <gray>active"
         lines += "<gray>Sidebars: <white>${SidebarManager.activeCount}"
         lines += "<gray>Mongo: " + if (SporeMongo.isInitialized) "<s_green>connected" else "<gray>not configured"

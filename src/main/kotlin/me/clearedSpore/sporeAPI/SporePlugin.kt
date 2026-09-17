@@ -26,6 +26,7 @@ import me.clearedSpore.sporeAPI.util.CC.accentDark
 import me.clearedSpore.sporeAPI.util.CC.error
 import me.clearedSpore.sporeAPI.util.CC.translate
 import me.clearedSpore.sporeAPI.util.CC.white
+import me.clearedSpore.sporeAPI.util.FoliaUtil
 import me.clearedSpore.sporeAPI.util.Logger
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.ActionBar
@@ -109,6 +110,8 @@ open class SporePlugin : JavaPlugin() {
     }
 
     final override fun onEnable() {
+        Logger.info("Detected server platform: ${if (FoliaUtil.isFolia) "Folia" else "Paper/Spigot"}")
+
         SporeApi.init(this)
         InvUI.getInstance().setPlugin(this)
         SporeMenuDefaults.register()
