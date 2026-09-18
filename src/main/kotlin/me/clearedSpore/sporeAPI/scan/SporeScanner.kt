@@ -27,6 +27,9 @@ object SporeScanner {
     fun annotatedWith(plugin: JavaPlugin, annotation: Class<out Annotation>): Set<Class<*>> =
         forPlugin(plugin).getTypesAnnotatedWith(annotation)
 
+    fun methodsAnnotatedWith(plugin: JavaPlugin, annotation: Class<out Annotation>): Set<java.lang.reflect.Method> =
+        forPlugin(plugin).getMethodsAnnotatedWith(annotation)
+
     fun invalidate(plugin: JavaPlugin) {
         cache.remove(plugin.name)
     }
@@ -53,7 +56,7 @@ object SporeScanner {
         configureVfs()
 
         val builder = ConfigurationBuilder()
-            .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes)
+            .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes, Scanners.MethodsAnnotated)
             .addClassLoaders(plugin.javaClass.classLoader)
 
         val jarUrl = jarUrlOf(plugin)

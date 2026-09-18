@@ -5,6 +5,7 @@ import co.aikar.commands.MessageKeys
 import co.aikar.commands.PaperCommandManager
 import me.clearedSpore.sporeAPI.annotation.RegisterCommand
 import me.clearedSpore.sporeAPI.annotation.RegisterListener
+import me.clearedSpore.sporeAPI.annotation.SubscribeEvents
 import me.clearedSpore.sporeAPI.bossbar.BossBarManager
 import me.clearedSpore.sporeAPI.command.SporeCommand
 import me.clearedSpore.sporeAPI.command.SporeCommandManager
@@ -130,6 +131,9 @@ open class SporePlugin : JavaPlugin() {
 
         Logger.info("Scanning for listeners...")
         scanAndRegisterListeners()
+
+        Logger.info("Scanning for event subscribers...")
+        scanAndRegisterEventSubscribers()
 
         Logger.info("Registering module commands...")
 
@@ -286,6 +290,38 @@ open class SporePlugin : JavaPlugin() {
         }
 
         Logger.info("Auto-registered $count listener(s)")
+    }
+
+    private fun scanAndRegisterEventSubscribers() {
+        val methods = SporeScanner.methodsAnnotatedWith(this, SubscribeEvents::class.java)
+        var count = 0
+
+        methods.forEach { method ->
+            try {
+                if (method.parameterCount != 0) {
+                    Logger.warn(
+                        "Method ${method.declaringClass.simpleName}#${method.name} is annotated with " +
+                            "@SubscribeEvents but takes parameters, so it cannot be auto-invoked"
+                    )
+                    return@forEach
+                }
+
+                val instance = SporeScanner.objectInstanceOrNull(method.declaringClass)
+                    ?: method.declaringClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+
+                method.isAccessible = true
+                method.invoke(instance)
+                count++
+
+            } catch (e: Exception) {
+                IncidentReporter.report(
+                    "event.subscribe", e,
+                    details = mapOf("class" to method.declaringClass.name, "method" to method.name)
+                )
+            }
+        }
+
+        Logger.info("Auto-invoked $count event subscriber method(s)")
     }
 
     private fun kotlinObjectInstanceOrNull(clazz: Class<*>): Any? {
