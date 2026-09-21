@@ -153,9 +153,12 @@ object SidebarManager {
         private var hidden = false
 
         fun reset() {
-            lastTitle = null
-            lastLines = emptyList()
             snapshot = null
+
+            Tasks.run {
+                lastTitle = null
+                lastLines = emptyList()
+            }
         }
 
         fun tick() {
@@ -169,7 +172,7 @@ object SidebarManager {
             if (--ticksUntilUpdate > 0) return
 
             ticksUntilUpdate = sidebar.updateIntervalTicks.coerceAtLeast(1L)
-            update()
+            push()
         }
 
         fun refreshNow() {
@@ -210,7 +213,34 @@ object SidebarManager {
         }
 
         fun update() {
+            Tasks.runEntity(player, { push() })
+        }
+
+        private class Frame(val visible: Boolean, val title: Component?, val lines: List<Component>?)
+
+        private fun push() {
+            val sidebar = sidebar
+
             if (!sidebar.shouldShow(player)) {
+                Tasks.run { apply(Frame(false, null, null)) }
+                return
+            }
+
+            val data = snapshot
+            if (sidebar is AsyncSidebar<*> && data == null) return
+
+            val frame = Frame(
+                visible = true,
+                title = sidebar.titleFor(player, data),
+                lines = sidebar.linesFor(player, data).take(MAX_LINES)
+            )
+
+            Tasks.run { apply(frame) }
+        }
+
+        /** Runs on the global thread. */
+        private fun apply(frame: Frame) {
+            if (!frame.visible) {
                 if (!hidden) {
                     hidden = true
                     objective.displaySlot = null
@@ -223,16 +253,13 @@ object SidebarManager {
                 objective.displaySlot = DisplaySlot.SIDEBAR
             }
 
-            val data = snapshot
-            if (sidebar is AsyncSidebar<*> && data == null) return
-
-            val title = sidebar.titleFor(player, data)
+            val title = frame.title ?: return
             if (title != lastTitle) {
                 objective.displayName(title)
                 lastTitle = title
             }
 
-            val lines = sidebar.linesFor(player, data).take(MAX_LINES)
+            val lines = frame.lines ?: return
             if (lines == lastLines) return
 
             for (index in lines.size until lastLines.size) {
