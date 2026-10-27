@@ -1,3 +1,7 @@
+plugins {
+    id("sporeapi.module")
+}
+
 // Velocity proxy module. Depending on this also gives you everything in common.
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")

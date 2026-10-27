@@ -1,3 +1,7 @@
+plugins {
+    id("sporeapi.module")
+}
+
 dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     api("org.reflections:reflections:0.10.2")

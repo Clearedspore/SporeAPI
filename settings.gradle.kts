@@ -1,3 +1,8 @@
+pluginManagement {
+    // The shared module setup lives in build-logic (plugin id "sporeapi.module")
+    includeBuild("build-logic")
+}
+
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }

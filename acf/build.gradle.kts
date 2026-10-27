@@ -1,3 +1,7 @@
+plugins {
+    id("sporeapi.module")
+}
+
 // ACF (Aikar's Command Framework) support for older projects. Includes paper (and so common).
 // Your main class extends SporeAcfPlugin instead of SporePlugin.
 dependencies {

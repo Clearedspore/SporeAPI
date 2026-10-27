@@ -1,3 +1,7 @@
+plugins {
+    id("sporeapi.module")
+}
+
 dependencies {
     api(project(":SporeAPI-Shared")) {
         exclude(group = "net.kyori")

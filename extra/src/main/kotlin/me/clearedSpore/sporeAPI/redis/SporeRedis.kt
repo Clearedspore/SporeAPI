@@ -208,7 +208,11 @@ object SporeRedis {
         pool = null
     }
 
-    private fun publisher(): JedisPool = pool ?: error("SporeRedis is not connected")
+    inline fun <T> connection(block: (Jedis) -> T): T =
+        blockingIo("redis.command") { publisher().resource.use(block) }
+
+    @PublishedApi
+    internal fun publisher(): JedisPool = pool ?: error("SporeRedis is not connected")
 
     private fun createPool(settings: RedisSettings): JedisPool {
         val config = JedisPoolConfig().apply {
