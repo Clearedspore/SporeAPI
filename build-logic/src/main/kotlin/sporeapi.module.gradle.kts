@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "eu.sporedev"
-version = "11.0.1"
+version = "11.0.3"
 
 val jvm = (findProperty("sporeJvm") as String?)?.toInt() ?: 25
 
