@@ -14,28 +14,21 @@ import me.clearedSpore.sporeAPI.debug.LifecyclePhase
 import me.clearedSpore.sporeAPI.debug.SporeDebug
 import me.clearedSpore.sporeAPI.dialog.SporeDialogs
 import me.clearedSpore.sporeAPI.event.SporeListeners
+import me.clearedSpore.sporeAPI.menu.invui.SporeMenuDefaults
 import me.clearedSpore.sporeAPI.scan.SporeScanner
 import me.clearedSpore.sporeAPI.scan.forPlugin
 import me.clearedSpore.sporeAPI.scan.methodsAnnotatedWith
 import me.clearedSpore.sporeAPI.scoreboard.SidebarManager
-import me.clearedSpore.sporeAPI.tablist.TablistManager
-import me.clearedSpore.sporeAPI.menu.invui.SporeMenuDefaults
 import me.clearedSpore.sporeAPI.serialization.SporeSerialization
+import me.clearedSpore.sporeAPI.tablist.TablistManager
 import me.clearedSpore.sporeAPI.task.SporeScheduler
-import me.clearedSpore.sporeAPI.task.TaskBuilder
-import me.clearedSpore.sporeAPI.util.CC.accent
-import me.clearedSpore.sporeAPI.util.CC.accentDark
-import me.clearedSpore.sporeAPI.util.CC.error
-import me.clearedSpore.sporeAPI.util.CC.translate
-import me.clearedSpore.sporeAPI.util.CC.white
-import me.clearedSpore.sporeAPI.util.FoliaUtil
-import me.clearedSpore.sporeAPI.util.Logger
 import me.clearedSpore.sporeAPI.task.Tasks
 import me.clearedSpore.sporeAPI.util.ActionBar
-import me.clearedSpore.sporeAPI.util.Cooldown
+import me.clearedSpore.sporeAPI.util.CC.accentDark
+import me.clearedSpore.sporeAPI.util.FoliaUtil
 import me.clearedSpore.sporeAPI.util.ItemBuilder
+import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.plugin.java.JavaPlugin
-import org.reflections.Reflections
 import xyz.xenondevs.invui.InvUI
 
 // Copyright (c) 2025-2026 ClearedSpore
@@ -134,7 +127,12 @@ open class SporePlugin : JavaPlugin() {
             val name = module.javaClass.simpleName
 
             (module.getCommands() + module.getCloudCommands()).forEach { command ->
-                if (registerCommandNow(command, "module.registerCommand", mapOf("module" to name)) != null) moduleCount++
+                if (registerCommandNow(
+                        command,
+                        "module.registerCommand",
+                        mapOf("module" to name)
+                    ) != null
+                ) moduleCount++
             }
 
             module.getListeners().forEach {
@@ -216,14 +214,18 @@ open class SporePlugin : JavaPlugin() {
     private fun looksLikeAcf(clazz: Class<*>): Boolean =
         generateSequence(clazz.superclass) { it.superclass }.any { it.simpleName == "BaseCommand" }
 
-    private fun registerCommandNow(command: Any, operation: String, details: Map<String, String> = emptyMap()): String? {
+    private fun registerCommandNow(
+        command: Any,
+        operation: String,
+        details: Map<String, String> = emptyMap()
+    ): String? {
         val registrar = (commandRegistrars + cloudRegistrar).firstOrNull { it.supports(command) }
 
         if (registrar == null) {
             val frameworks = (commandRegistrars + cloudRegistrar).joinToString(" or ") { it.name }
             Logger.warn(
                 "${command.javaClass.simpleName} is not a command any registered framework understands ($frameworks)" +
-                    if (looksLikeAcf(command.javaClass)) " - ACF commands need a main class extending SporeAcfPlugin (sporeapi-acf)" else ""
+                        if (looksLikeAcf(command.javaClass)) " - ACF commands need a main class extending SporeAcfPlugin (sporeapi-acf)" else ""
             )
             return null
         }
@@ -232,7 +234,11 @@ open class SporePlugin : JavaPlugin() {
             registrar.register(command)
             registrar.name
         } catch (e: Exception) {
-            IncidentReporter.report(operation, e, details = details + mapOf("command" to command.javaClass.name, "framework" to registrar.name))
+            IncidentReporter.report(
+                operation,
+                e,
+                details = details + mapOf("command" to command.javaClass.name, "framework" to registrar.name)
+            )
             null
         }
     }
@@ -249,7 +255,8 @@ open class SporePlugin : JavaPlugin() {
                 }
 
                 val instance = (SporeScanner.objectInstanceOrNull(clazz)
-                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }.newInstance()) as org.bukkit.event.Listener
+                    ?: clazz.getDeclaredConstructor().apply { isAccessible = true }
+                        .newInstance()) as org.bukkit.event.Listener
 
                 SporeListeners.register(instance)
                 count++
@@ -271,7 +278,7 @@ open class SporePlugin : JavaPlugin() {
                 if (method.parameterCount != 0) {
                     Logger.warn(
                         "Method ${method.declaringClass.simpleName}#${method.name} is annotated with " +
-                            "@SubscribeEvents but takes parameters, so it cannot be auto-invoked"
+                                "@SubscribeEvents but takes parameters, so it cannot be auto-invoked"
                     )
                     return@forEach
                 }

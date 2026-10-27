@@ -22,5 +22,5 @@ dependencies {
     api("org.incendo:cloud-brigadier")
     api("org.incendo:cloud-kotlin-coroutines-annotations")
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect:2.4.0")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.4.21")
 }

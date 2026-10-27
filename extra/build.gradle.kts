@@ -8,11 +8,11 @@ dependencies {
         exclude(group = "com.google.code.gson")
     }
 
-    api("org.mongodb:mongodb-driver-sync:5.8.0")
+    api("org.mongodb:mongodb-driver-sync:5.13.0")
 
-    compileOnly("com.google.code.gson:gson:2.14.0")
+    compileOnly("com.google.code.gson:gson:2.15.0")
 
-    api("redis.clients:jedis:7.2.0") {
+    api("redis.clients:jedis:8.0.2") {
         exclude(group = "com.google.code.gson")
     }
 }
