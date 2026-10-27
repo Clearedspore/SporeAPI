@@ -17,17 +17,20 @@ SporeAPI is a Kotlin Minecraft API that you can use in your projects. It include
 - [Chat input](#chat-input)
 - [Dialogs](#dialogs)
 - [Commands and listeners](#commands-and-listeners)
-- [Events](#events)
-- [Coroutines](#coroutines)
-- [Scoreboards](#scoreboards)
+- [Events](#events) and an [event bus](#event-bus-your-own-events)
+- [Coroutines](#coroutines), [repeat and delay](#repeating-and-delayed-work), [rate limiting](#rate-limiting)
+- [Scoreboards](#scoreboards) and [tab lists](#tab-list)
 - [Registries](#registries)
 - [Repositories](#repositories)
+- [Redis packets](#redis-packets)
 - [Cooldowns](#cooldowns)
 - [Confirmations](#confirmations)
 - [Tasks and scheduling](#tasks-and-scheduling)
 - [Discord webhooks](#discord-webhooks)
 - [Item builder](#item-builder)
+- [Timings](#timings)
 - [Debugging](#debugging)
+- [Velocity](#velocity)
 - Serialization
 - And much more!
 
@@ -44,6 +47,70 @@ Replace the version with the latest API version.
 ![Latest Version](https://img.shields.io/github/v/release/ClearedSpore/SporeAPI)
  
 You can find the repository and dependency [here](https://repo.sporedev.eu/#/releases/eu/sporedev)
+
+## Modules
+
+SporeAPI is split into modules. Pick the one for your platform. Each one brings everything it needs with it, so you never have to add ACF, Cloud, InvUI, Caffeine, Mongo etc. yourself.
+
+| Module                          | Use it for                    | Contains                                                                                                                                                           |
+|---------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `eu.sporedev:sporeapi-paper`    | Paper / Folia plugins         | Everything Minecraft related **and** all of `common`                                                                                                               |
+| `eu.sporedev:sporeapi-velocity` | Velocity proxy plugins        | `SporeVelocityPlugin`, Cloud commands, listener scanning, `/debug` **and** all of `common`                                                                          |
+| `eu.sporedev:sporeapi-common`   | Discord bots, any JVM app     | Logger, colors (`CC`), coroutines, `repeat`/`delay`, event bus, timings, rate limiter, debug/incidents, registries, repositories, serialization, cooldowns, webhooks |
+| `eu.sporedev:sporeapi-extra`    | Add-on next to any of these   | Heavier systems: Redis packets (`SporeRedis`, `Packet`) and Mongo (`SporeMongo`, `MongoRepository`)                                                               |
+| `eu.sporedev:sporeapi-acf`      | Older plugins that use ACF    | ACF support (`SporeAcfPlugin`, `SporeCommand`) **and** all of `paper`                                                                                              |
+
+```kotlin
+repositories {
+    maven("https://repo.sporedev.eu/releases")
+}
+
+dependencies {
+    implementation("eu.sporedev:sporeapi-paper:VERSION")
+    // implementation("eu.sporedev:sporeapi-extra:VERSION") // only if you need Mongo etc.
+}
+```
+
+You only ever need **one** of `common`, `paper`, `velocity` or `acf`: `acf` includes `paper`, and `paper` and `velocity` include `common`. Shade it into your plugin (and relocate it) as usual.
+
+`common`, `velocity` and `extra` are built for **Java 21**, `paper` and `acf` for **Java 25** (what Paper 26 needs).
+
+## Velocity
+
+Extend `SporeVelocityPlugin` and pass the injected values through:
+
+```kotlin
+@Plugin(id = "atlas", name = "Atlas", version = "1.0")
+class AtlasVelocity @Inject constructor(
+    server: ProxyServer,
+    logger: Logger,
+    @DataDirectory dataDirectory: Path
+) : SporeVelocityPlugin(server, logger, dataDirectory) {
+
+    override fun onPluginEnable() {
+        SporeDebugCommand.register(commandManager, "atlasv", "atlas.admin")
+    }
+
+    override fun setupCloud(manager: SporeVelocityCommandManager) {
+        // suggestion providers, parsers...
+    }
+}
+```
+
+On proxy start SporeAPI sets itself up and registers every `@RegisterCommand` class (Cloud annotations) and every `@RegisterListener` class (any class with `@Subscribe` methods). Command methods can take a `Player` directly. On proxy shutdown everything is cleaned up, including running coroutines.
+
+`SporeVelocity.server` / `SporeVelocity.plugin` give you the proxy from anywhere, and `CommandSource.success()` / `error()` work like on Paper. Everything from `common` (coroutines, `repeat`, event bus, timings, rate limiter, incidents) works the same on the proxy.
+
+## Not on Paper or Velocity?
+
+You tell SporeAPI where it is running once at startup:
+
+```kotlin
+SporeCore.init(StandalonePlatform("MyBot", MyBot::class.java))
+Logger.initialize("MyBot")
+```
+
+Override `StandalonePlatform.log` to forward console lines to your own logger, and call `SporeCoroutines.useMainDispatcher(...)` if your platform has a main thread.
 
 ---
 
@@ -599,28 +666,20 @@ openLoaded(viewer, "<s_blue>$name", "<gray>Loading <white>$name</white>...", "pr
 
 # Commands and listeners
 
-SporeAPI is built on top of ACF (Aikar's Command Framework), and can register your commands and listeners for you automatically, so you don't have to do it by hand in `onEnable`.
+SporeAPI can register your commands and listeners for you automatically, so you don't have to do it by hand in `onEnable`.
 
 For this to work, your main class needs to extend `SporePlugin` (see [Getting started](#getting-started)).
 
 ## Commands
 
-Extend `SporeCommand` like you normally would with ACF, and add `@RegisterCommand` on top of the class. SporeAPI will find it and register it for you.
+Put `@RegisterCommand` on a command class and SporeAPI finds and registers it. It looks at the class and sends it to the right framework, so you don't pick:
 
-```kotlin
-@RegisterCommand
-class TestCommand : SporeCommand() {
+- a class with [Cloud](https://cloud.incendo.org/) annotations goes to Cloud (built into `sporeapi-paper`)
+- a class extending `SporeCommand` goes to ACF (needs `sporeapi-acf`, see [ACF commands](#acf-commands))
 
-    @CommandAlias("test")
-    fun onTest(sender: CommandSender) {
-        sender.sendMessage("It works!")
-    }
-}
-```
+The same routing applies to `SporeModule.getCommands()` and `registerCommand(command)` in your main class.
 
 ## Cloud commands
-
-`@RegisterCommand` also works with [Cloud](https://cloud.incendo.org/) annotated commands. SporeAPI looks at the class: if it extends `SporeCommand` it goes to ACF, and if it (or one of its methods) carries a Cloud annotation it goes to the Cloud manager instead. You don't pick, it just routes.
 
 ```kotlin
 @RegisterCommand
@@ -643,6 +702,33 @@ override fun setupCloud(manager: SporeCloudCommandManager) {
     CommandSuggestions.register(manager.manager)
 }
 ```
+
+## ACF commands
+
+ACF (Aikar's Command Framework) lives in its own module for older projects. Use `eu.sporedev:sporeapi-acf` instead of `sporeapi-paper` (it includes paper), and extend `SporeAcfPlugin` instead of `SporePlugin`:
+
+```kotlin
+class MyPlugin : SporeAcfPlugin() {
+
+    override fun setupACF(manager: PaperCommandManager) {
+        super.setupACF(manager) // keeps the SporeAPI styled help/error messages
+        // your contexts and completions
+    }
+}
+
+@RegisterCommand
+class TestCommand : SporeCommand() {
+
+    @CommandAlias("test")
+    fun onTest(sender: CommandSender) {
+        sender.sendMessage("It works!")
+    }
+}
+```
+
+Cloud commands keep working next to ACF ones in the same plugin. The ACF manager is available as `commandManager`.
+
+> ⚠️ ACF needs parameter names kept when compiling: `kotlin { compilerOptions { javaParameters = true } }`.
 
 ## Listeners
 
@@ -733,6 +819,28 @@ Three things to keep in mind:
 
 Everything before the first real suspension point still runs inline on the main thread, so a `suspend` handler that never actually suspends behaves exactly like a normal one.
 
+## Event bus (your own events)
+
+The helpers above are for Bukkit events. For your own events, on any platform (Paper, Velocity, a bot), there's `SporeBus`:
+
+```kotlin
+class PunishmentIssuedEvent(val target: UUID, val reason: String) : Cancellable {
+    override var isCancelled = false
+}
+
+SporeBus.on<PunishmentIssuedEvent> { event -> Webhook(url).setMessage(event.reason).send() }
+SporeBus.on<PunishmentIssuedEvent>(BusPriority.LOWEST) { if (isExempt(it.target)) it.isCancelled = true }
+
+val event = SporeBus.post(PunishmentIssuedEvent(uuid, "Spam"))
+if (event.isCancelled) return
+```
+
+- Handlers run in priority order (`LOWEST` first, `MONITOR` last), on the thread that calls `post`.
+- A handler for a parent class or interface also gets every subtype.
+- `on` returns a `BusSubscription` you can `unregister()`. `ignoreCancelled = true` skips cancelled events.
+- A handler that throws is reported as an incident, the other handlers still run.
+- `onAsync { }` takes a suspending handler. Like with Bukkit events, it can't cancel the event, because `post` returns before it finishes.
+
 ---
 
 # Coroutines
@@ -740,14 +848,16 @@ Everything before the first real suspension point still runs inline on the main 
 `SporeCoroutines` gives you a scope that's tied to your plugin's lifetime, so anything still running gets cancelled on disable instead of leaking into the next reload.
 
 ```kotlin
-SporeCoroutines.launch { /* starts on the main thread */ }
-SporeCoroutines.launchAsync { /* starts off the main thread */ }
+launch { /* starts on the main thread */ }
+launchAsync { /* starts off the main thread */ }
 ```
+
+Both are top-level functions (`me.clearedSpore.sporeAPI.coroutine.launch`), `SporeCoroutines.launch { }` still works too. Inside a coroutine, plain `launch { }` is kotlinx's own, which starts a child of the current coroutine - usually exactly what you want there.
 
 Inside a coroutine you switch threads with `withAsyncCtx` and `withRunCtx`, which is the pattern for "load something slow, then touch the world with it":
 
 ```kotlin
-SporeCoroutines.launch {
+launch {
     val data = withAsyncCtx { repository.findBlocking(id) }   // off the main thread
     withRunCtx { player.sendMessage("Loaded $data") }         // back on the main thread
 }
@@ -756,6 +866,37 @@ SporeCoroutines.launch {
 `delayTicks(20)` is there too if you think in ticks rather than milliseconds.
 
 The main dispatcher only actually schedules a task when it has to - if you're already on the server thread, `withRunCtx` runs your block inline.
+
+## Repeating and delayed work
+
+```kotlin
+repeat(5.seconds) { sendHeartbeat() }
+repeat(every = 1.minutes, delay = 30.seconds, async = true) { pushConfig() }
+
+delay(10.seconds) { player.sendMessage("10 seconds later") }
+```
+
+- They return a `Job`: call `cancel()` to stop or call it off. Everything also stops when the plugin disables / the proxy shuts down.
+- `repeat` waits for a run to finish before the next one starts, so runs never pile up or overlap.
+- A run that throws is reported as an incident and the loop keeps going.
+- They start on the main thread on Paper, pass `async = true` for blocking work. The block is a coroutine, so you can use `withAsyncCtx`, `delay`, etc. inside it.
+
+Durations are Kotlin's (`import kotlin.time.Duration.Companion.seconds`). Kotlin's own `repeat(3) { }` and the suspending `delay(1.seconds)` keep working, they only differ in arguments.
+
+## Rate limiting
+
+```kotlin
+private val chatLimit = RateLimiter<UUID>(limit = 5, per = 10.seconds)
+
+if (!chatLimit.tryAcquire(player.uniqueId)) {
+    player.error("Slow down! Try again in ${chatLimit.retryAfter(player.uniqueId).inWholeSeconds}s")
+    return
+}
+```
+
+- `tryAcquire(key)` uses one go if there is one left, `remaining(key)` and `retryAfter(key)` tell you where a key stands.
+- `acquire(key)` suspends until a go is free instead of failing - good for webhooks and APIs with rate limits.
+- Uses refill smoothly over time (a token bucket), and keys that sit idle are dropped, so it doesn't grow forever.
 
 ## Caching suspend loads
 
@@ -840,6 +981,49 @@ Fetches never overlap - if one is still running when the next is due, that tick 
 
 Text that comes from outside your plugin (rank prefixes, nicknames) is usually legacy-coded rather than MiniMessage, so build it into a component and `append` it instead of interpolating it into a `.mm()` string - otherwise the colour codes show up as literal text.
 
+## Tab list
+
+The tab list works with one adapter for the whole server. Set it once and every player online, and everyone who joins later, gets it:
+
+```kotlin
+object MyTablist : Tablist() {
+
+    override fun header(viewer: Player) = "<s_blue><b>MyServer".mm()
+    override fun footer(viewer: Player) = "<gray>Online: <white>${Bukkit.getOnlinePlayers().size}".mm()
+
+    // How a player shows up in everyone's tab list, null keeps their normal name
+    override fun name(target: Player) = "<gray>[${rank(target)}] <white>${target.name}".mm()
+
+    // Higher shows first
+    override fun order(target: Player) = rankWeight(target)
+}
+
+TablistManager.use(MyTablist)
+```
+
+Header and footer are per viewer. Name and order are per player and the same for everyone, that's how Minecraft's tab list works. Order uses Paper's list order, not scoreboard teams, so it never fights with sidebars.
+
+It's built to stay out of the server's way:
+
+- **Spread out.** With the default 20 tick interval about 1/20th of the players update each tick, instead of everyone in the same tick.
+- **Only changes are sent.** Header/footer, name and order are compared with what the player already has, so an unchanged tab list costs no packets.
+- **Folia safe.** Every player is updated on their own region thread.
+
+If the header or footer needs slow data, use `AsyncTablist`. `fetch` runs off the main thread, and rendering always uses the latest result, so a slow database never holds up a tick:
+
+```kotlin
+object StatsTablist : AsyncTablist<Stats>() {
+
+    override val fetchIntervalTicks = 100L
+
+    override fun fetch(viewer: Player): Stats = StatsRepository.loadBlocking(viewer.uniqueId)
+
+    override fun header(viewer: Player, data: Stats) = "<s_blue>Kills: <white>${data.kills}".mm()
+}
+```
+
+`TablistManager.refresh(player)` / `refreshAll()` update right away (e.g. after a rank change), and `TablistManager.clear()` removes it and resets everyone.
+
 ---
 
 # Registries
@@ -851,7 +1035,8 @@ object ItemRegistry : Registry<Item>(Item::class, RegisterItem::class) {
     override fun idOf(value: Item): String = value.id
 }
 
-ItemRegistry.scan(plugin)          // finds everything annotated with @RegisterItem
+ItemRegistry.scan(plugin)          // finds everything annotated with @RegisterItem (Paper, import me.clearedSpore.sporeAPI.scan.scan)
+ItemRegistry.scan(MyApp::class.java) // same thing outside Paper: pass your main class
 ItemRegistry.register(myItem)      // or register by hand
 
 val item = ItemRegistry["magic_sword"]   // null if missing
@@ -900,6 +1085,76 @@ Your plugin still owns the client and its lifetime - SporeAPI never opens or clo
 `YamlRepository` is the same interface backed by a folder of `.yml` files, with `write`/`read` instead of `toDocument`/`fromDocument`.
 
 Every blocking call in both goes through the main-thread IO guard, so calling one on the server thread shows up in [debugging](#debugging).
+
+---
+
+# Redis packets
+
+Send packets between servers, proxies and bots over Redis (Jedis pub/sub). Needs `sporeapi-extra`.
+
+Connect once at startup, and disconnect on shutdown:
+
+```kotlin
+override fun onPluginEnable() {
+    SporeRedis.connect(
+        RedisSettings(
+            address = config.redis.address,   // "host:port"
+            username = config.redis.username,
+            password = config.redis.password,
+            channel = "atlas"                 // everything on the same channel sees each other's packets
+        ),
+        MyPlugin::class.java                  // scans your jar for packets and packet listeners
+    )
+}
+
+override fun onPluginDisable() {
+    SporeRedis.shutdown()
+}
+```
+
+A packet is a class extending `Packet`, its fields are sent as JSON:
+
+```kotlin
+@RegisterPacket
+class KickPlayerPacket(val uuid: String, val lines: List<String>) : Packet()
+
+KickPlayerPacket(uuid, listOf("Banned")).sendAsync()   // or send() to publish on this thread
+```
+
+Listen with a class full of `onReceive` methods, or a lambda:
+
+```kotlin
+@RegisterPacketListener
+class NetworkListener {
+    fun onReceive(packet: KickPlayerPacket) { /* ... */ }
+    fun onReceive(packet: BroadcastPacket) { /* ... */ }
+}
+
+SporeRedis.onReceive<KickPlayerPacket> { packet -> /* ... */ }
+```
+
+Or let the packet handle itself, `this` is the packet that arrived:
+
+```kotlin
+@RegisterPacket
+class StaffChatPacket(val sender: String, val message: String) : Packet() {
+
+    override fun onReceive() {
+        Bukkit.broadcast("<s_blue>[Staff] <white>$sender: $message".mm(), "myplugin.staff")
+    }
+}
+```
+
+That's handy for packets only one platform uses. A packet in a shared module that Paper and Velocity handle differently still needs a `@RegisterPacketListener` per platform, since the shared module can't call Bukkit or Velocity code. Use `@RegisterPacket(async = true)` to run `onReceive()` off the main thread. It runs next to any listeners for the same packet, and the packet needs `@RegisterPacket` (or `SporeRedis.register<T>()`) so it's picked up.
+
+- **Main thread by default.** Listeners run on SporeAPI's main dispatcher, which is the main thread on Paper, so you can touch the world straight away. Use `@RegisterPacketListener(async = true)` or `onReceive(async = true)` for blocking work.
+- **Reconnects by itself.** If Redis goes down the subscriber retries (1s, 2s, 4s ... up to 30s) and picks up again when it's back. If Redis isn't reachable at startup it keeps retrying in the background instead of breaking your plugin.
+- **Errors are incidents.** A listener that throws, or a packet that can't be read, shows up in [debugging](#debugging). The other listeners still run. `/mycommand debug` shows the connection and how many packets were sent and received.
+- **Your own packets.** Redis also delivers a packet to the server that sent it. Set `receiveOwnPackets = false` to skip those.
+- `@RegisterPacket` is only needed for packets nobody listens to locally: a listener registers its packet type on its own. `onReceive` returns a subscription you can `unregister()`.
+- `send()` is blocking IO, so it's flagged by the main-thread IO guard. Use `sendAsync()` on the main thread.
+
+The JSON format (`{"type": "<class name>", "data": {...}}`) is the same as Atlas uses, so packets still match as long as the class names do.
 
 ---
 
@@ -1026,6 +1281,36 @@ val loaded = SporeSerializer.deserialize(saved, Location::class.java)
 ```
 
 For anything else, it just falls back to normal JSON, so it works with most of your own data classes too. If you want full control over how a type is saved, you can register your own codec with `SporeCodecRegistry.register(MyType::class.java, MyCodec())`.
+
+---
+
+# Timings
+
+Time a series of steps, like everything a reload command does, and send the result at the end:
+
+```kotlin
+@Command("atlas reload")
+suspend fun reload(sender: CommandSender) {
+    val timing = Timing("Atlas reload")
+
+    withAsyncCtx {
+        timing.step("config") { AtlasConfig.reload() }
+        timing.step("punishments") { PunishmentConfig.reload() }
+        timing.step("shop") { SaintCoinsShopService.reload() }
+        timing.stepSuspend("tebex") { TebexService.refresh() }
+    }
+
+    sender.sendMessage(timing.summary())
+}
+```
+
+That sends **"Atlas reload took 132ms"**, and hovering it shows every step with its time, the slowest one highlighted.
+
+- A step that throws doesn't stop the rest: it's reported as an incident and shows up as **✗** in red, and the summary says how many failed.
+- `step` returns the block's result (or null if it failed).
+- `timing.total`, `timing.steps` and `timing.failed` are there if you want to build your own message. `summaryText()` and `breakdownText()` give you the MiniMessage strings.
+
+For things that run over and over (a database load, a packet handler), `Timings.timed("db.loadPlayer") { ... }` keeps running stats. The slowest ones show up in `/mycommand debug`, and `/mycommand debug timings` lists them all with average, max and count.
 
 ---
 
@@ -1163,7 +1448,9 @@ SporeDebugCommand.register(cloudCommandManager, "mycommand", "myplugin.admin")
 
 | Command                              | What it does                                                                                           |
 |--------------------------------------|--------------------------------------------------------------------------------------------------------|
-| `/mycommand debug`                   | Overview - scheduler load, coroutines, sidebars, Mongo, registries, the IO guard and an incident count |
+| `/mycommand debug`                   | Overview - scheduler load, coroutines, sidebars, tab lists, Mongo, registries, the IO guard, the slowest timings and an incident count |
+| `/mycommand debug timings`           | Every `Timings.timed` operation, slowest average first                                                 |
+| `/mycommand debug timings clear`     | Forgets every timing                                                                                   |
 | `/mycommand debug errors`            | The last 10 incidents, newest first. Click one for details                                             |
 | `/mycommand debug error <ref>`       | Everything about one incident: what, why, where, breadcrumbs, how often, and a short trace             |
 | `/mycommand debug error <ref> trace` | Prints the full stack trace to the console                                                             |
@@ -1177,6 +1464,8 @@ To alert staff in chat when something breaks, pass `notifyStaff = true` - everyo
 ```kotlin
 SporeDebugCommand.register(cloudCommandManager, "mycommand", "myplugin.admin", notifyStaff = true)
 ```
+
+On Velocity it's the same command, registered with `SporeDebugCommand.register(commandManager, "mycommand", "myplugin.admin")` from `SporeVelocityPlugin`.
 
 ### Hooking in
 
