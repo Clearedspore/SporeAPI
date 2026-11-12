@@ -186,6 +186,9 @@ class CloudCustomizer<C : Any>(
         return Regex("of type '([^']+)'").find(message)?.groupValues?.get(1)?.substringAfterLast('.')?.lowercase() ?: "player"
     }
 
+    fun render(spec: CloudCustomization, template: String, prefixed: Boolean = true, vararg extra: TagResolver): Component =
+        ((if (prefixed) spec.theme.prefix else "") + template).mm(tagResolver(spec.theme), *extra)
+
     private fun color(hex: String): TextColor =
         TextColor.fromHexString(hex) ?: error("Invalid colour '$hex' in cloud theme, expected #RRGGBB")
 }

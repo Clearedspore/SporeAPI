@@ -12,6 +12,7 @@ class CloudCustomization {
     val messages = CloudMessages()
     val captions = CloudCaptions()
     val help = CloudHelp()
+    val vanilla = CloudVanilla()
 
     val placeholders = linkedMapOf<String, String>()
 
@@ -23,6 +24,7 @@ class CloudCustomization {
     fun messages(block: CloudMessages.() -> Unit) = messages.block()
     fun captions(block: CloudCaptions.() -> Unit) = captions.block()
     fun help(block: CloudHelp.() -> Unit) = help.block()
+    fun vanilla(block: CloudVanilla.() -> Unit) = vanilla.block()
     fun placeholders(block: MutableMap<String, String>.() -> Unit) = placeholders.block()
 
     inline fun <reified T : Throwable> handle(noinline handler: (sender: Audience, exception: T) -> Unit) {
@@ -83,4 +85,13 @@ class CloudHelp {
     fun message(key: String, value: String) {
         messages[key] = value
     }
+}
+
+
+class CloudVanilla {
+    var unknownCommand: String? = null
+
+    var incorrectArgument: String? = null
+
+    var hereMarker: String? = null
 }

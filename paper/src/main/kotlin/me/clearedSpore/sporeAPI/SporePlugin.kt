@@ -164,6 +164,7 @@ open class SporePlugin : JavaPlugin() {
         SporeDebug.phase = LifecyclePhase.STOPPING
 
         SporeCoroutines.shutdown()
+        cloudCommandManager.shutdown()
 
         SporeDialogs.shutdown()
         SidebarManager.shutdown()

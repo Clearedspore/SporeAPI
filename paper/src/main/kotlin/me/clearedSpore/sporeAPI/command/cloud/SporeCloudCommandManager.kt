@@ -40,6 +40,8 @@ class SporeCloudCommandManager(
 
     private var applied = false
 
+    private val vanillaMessages = VanillaCommandMessages()
+
     val manager: PaperCommandManager<CommandSourceStack>
         get() = cloud
 
@@ -76,7 +78,10 @@ class SporeCloudCommandManager(
         if (applied) return
         applied = true
         customizer.apply(customization)
+        vanillaMessages.install(customization) { template, prefixed -> customizer.render(customization, template, prefixed) }
     }
+
+    fun shutdown() = vanillaMessages.uninstall()
 
     fun register(instance: Any) {
         finalizeSetup()
