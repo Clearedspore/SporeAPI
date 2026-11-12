@@ -41,10 +41,7 @@ class SporeCloudCommandManager(
     private var applied = false
 
     val manager: PaperCommandManager<CommandSourceStack>
-        get() {
-            ensureApplied()
-            return cloud
-        }
+        get() = cloud
 
     init {
         cloud.brigadierManager().setNativeNumberSuggestions(true)
@@ -75,14 +72,14 @@ class SporeCloudCommandManager(
     }
 
     @Synchronized
-    private fun ensureApplied() {
+    fun finalizeSetup() {
         if (applied) return
         applied = true
         customizer.apply(customization)
     }
 
     fun register(instance: Any) {
-        ensureApplied()
+        finalizeSetup()
         annotationParser.parse(instance)
     }
 }

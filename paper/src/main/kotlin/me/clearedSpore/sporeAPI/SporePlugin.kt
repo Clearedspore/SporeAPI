@@ -105,6 +105,7 @@ open class SporePlugin : JavaPlugin() {
         SporeSerialization.init()
         ItemBuilder.init(this)
         setupCloud(cloudCommandManager)
+        cloudCommandManager.finalizeSetup()
 
         Logger.info("Scanning for commands...")
         scanAndRegisterCommands()

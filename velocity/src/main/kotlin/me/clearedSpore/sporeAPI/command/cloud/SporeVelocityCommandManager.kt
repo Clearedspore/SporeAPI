@@ -43,10 +43,7 @@ class SporeVelocityCommandManager(plugin: SporeVelocityPlugin) {
     private var applied = false
 
     val manager: VelocityCommandManager<CommandSource>
-        get() {
-            ensureApplied()
-            return cloud
-        }
+        get() = cloud
 
     init {
         cloud.parameterInjectorRegistry().registerInjector(
@@ -70,14 +67,14 @@ class SporeVelocityCommandManager(plugin: SporeVelocityPlugin) {
     }
 
     @Synchronized
-    private fun ensureApplied() {
+    fun finalizeSetup() {
         if (applied) return
         applied = true
         customizer.apply(customization)
     }
 
     fun register(instance: Any) {
-        ensureApplied()
+        finalizeSetup()
         annotationParser.parse(instance)
     }
 }

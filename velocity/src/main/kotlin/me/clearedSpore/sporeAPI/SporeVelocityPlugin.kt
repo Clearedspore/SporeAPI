@@ -57,6 +57,7 @@ abstract class SporeVelocityPlugin(
         Logger.initialize(pluginName)
 
         setupCloud(commandManager)
+        commandManager.finalizeSetup()
         scanAndRegisterCommands()
         commandsReady = true
         pendingCommands.forEach(::registerCommandNow)
