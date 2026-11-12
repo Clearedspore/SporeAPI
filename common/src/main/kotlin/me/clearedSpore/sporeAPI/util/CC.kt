@@ -53,6 +53,11 @@ object CC {
             .decoration(TextDecoration.ITALIC, false)
     }
 
+    fun String.mm(vararg resolvers: TagResolver): Component {
+        return miniMessage.deserialize(this, *resolvers)
+            .decoration(TextDecoration.ITALIC, false)
+    }
+
     fun String.legacyToMiniMessage(): String {
         val component = ampersandSerializer.deserialize(this)
         return MiniMessage.miniMessage().serialize(component)

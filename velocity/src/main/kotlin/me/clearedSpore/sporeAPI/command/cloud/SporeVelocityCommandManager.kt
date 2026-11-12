@@ -5,11 +5,9 @@ import com.velocitypowered.api.proxy.Player
 import me.clearedSpore.sporeAPI.SporeVelocityPlugin
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
-import me.clearedSpore.sporeAPI.util.CC.mm
+import me.clearedSpore.sporeAPI.util.Logger
 import org.incendo.cloud.SenderMapper
 import org.incendo.cloud.annotations.AnnotationParser
-import org.incendo.cloud.exception.CommandExecutionException
-import org.incendo.cloud.exception.InjectionException
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.injection.ParameterInjector
 import org.incendo.cloud.kotlin.coroutines.annotations.installCoroutineSupport
@@ -21,7 +19,7 @@ import org.incendo.cloud.velocity.VelocityCommandManager
 
 class SporeVelocityCommandManager(plugin: SporeVelocityPlugin) {
 
-    val manager: VelocityCommandManager<CommandSource> = VelocityCommandManager(
+    private val cloud: VelocityCommandManager<CommandSource> = VelocityCommandManager(
         plugin.server.pluginManager.ensurePluginContainer(plugin),
         plugin.server,
         ExecutionCoordinator.simpleCoordinator(),
@@ -29,12 +27,29 @@ class SporeVelocityCommandManager(plugin: SporeVelocityPlugin) {
     )
 
     val annotationParser: AnnotationParser<CommandSource> = AnnotationParser(
-        manager,
+        cloud,
         CommandSource::class.java
     )
 
+    private val customization = CloudCustomization()
+
+    private val customizer = CloudCustomizer(
+        cloud,
+        annotationParser,
+        { it },
+        { IncidentReporter.report("command.cloud", it) }
+    )
+
+    private var applied = false
+
+    val manager: VelocityCommandManager<CommandSource>
+        get() {
+            ensureApplied()
+            return cloud
+        }
+
     init {
-        manager.parameterInjectorRegistry().registerInjector(
+        cloud.parameterInjectorRegistry().registerInjector(
             Player::class.java,
             ParameterInjector { context, _ -> context.sender() as? Player }
         )
@@ -43,21 +58,26 @@ class SporeVelocityCommandManager(plugin: SporeVelocityPlugin) {
             scope = SporeCoroutines.scope,
             onlyForSuspending = true
         )
+    }
 
-        manager.exceptionController().registerHandler(InjectionException::class.java) { ctx ->
-            ctx.context().sender().sendMessage("<s_red>Only players can run this command.".mm())
+    @Synchronized
+    fun customize(block: CloudCustomization.() -> Unit) {
+        if (applied) {
+            Logger.warn("customize() was called after commands were registered and was ignored; call it from setupCloud.")
+            return
         }
+        customization.block()
+    }
 
-        manager.exceptionController().registerHandler(CommandExecutionException::class.java) { ctx ->
-            IncidentReporter.report(
-                "command.cloud",
-                ctx.exception().cause ?: ctx.exception()
-            )
-            ctx.context().sender().sendMessage("<s_red>An internal error occurred while running that command.".mm())
-        }
+    @Synchronized
+    private fun ensureApplied() {
+        if (applied) return
+        applied = true
+        customizer.apply(customization)
     }
 
     fun register(instance: Any) {
+        ensureApplied()
         annotationParser.parse(instance)
     }
 }

@@ -4,13 +4,10 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import me.clearedSpore.sporeAPI.SporePlugin
 import me.clearedSpore.sporeAPI.coroutine.SporeCoroutines
 import me.clearedSpore.sporeAPI.debug.IncidentReporter
-import me.clearedSpore.sporeAPI.util.CC.mm
+import me.clearedSpore.sporeAPI.util.Logger
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.incendo.cloud.annotations.AnnotationParser
-import org.incendo.cloud.bukkit.parser.selector.MultiplePlayerSelectorParser
-import org.incendo.cloud.exception.CommandExecutionException
-import org.incendo.cloud.exception.InjectionException
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.injection.ParameterInjector
 import org.incendo.cloud.kotlin.coroutines.annotations.installCoroutineSupport
@@ -23,24 +20,41 @@ class SporeCloudCommandManager(
     plugin: SporePlugin
 ) {
 
-    val manager: PaperCommandManager<CommandSourceStack> = PaperCommandManager.builder()
+    private val cloud: PaperCommandManager<CommandSourceStack> = PaperCommandManager.builder()
         .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
         .buildOnEnable(plugin)
 
     val annotationParser: AnnotationParser<CommandSourceStack> = AnnotationParser(
-        manager,
+        cloud,
         CommandSourceStack::class.java
     )
 
-    init {
-        manager.brigadierManager().setNativeNumberSuggestions(true)
+    private val customization = CloudCustomization()
 
-        manager.parameterInjectorRegistry().registerInjector(
+    private val customizer = CloudCustomizer(
+        cloud,
+        annotationParser,
+        { it.sender },
+        { IncidentReporter.report("command.cloud", it) }
+    )
+
+    private var applied = false
+
+    val manager: PaperCommandManager<CommandSourceStack>
+        get() {
+            ensureApplied()
+            return cloud
+        }
+
+    init {
+        cloud.brigadierManager().setNativeNumberSuggestions(true)
+
+        cloud.parameterInjectorRegistry().registerInjector(
             CommandSender::class.java,
             ParameterInjector { context, _ -> context.sender().sender }
         )
 
-        manager.parameterInjectorRegistry().registerInjector(
+        cloud.parameterInjectorRegistry().registerInjector(
             Player::class.java,
             ParameterInjector { context, _ -> context.sender().sender as? Player }
         )
@@ -49,21 +63,26 @@ class SporeCloudCommandManager(
             scope = SporeCoroutines.scope,
             onlyForSuspending = true
         )
+    }
 
-        manager.exceptionController().registerHandler(InjectionException::class.java) { ctx ->
-            ctx.context().sender().sender.sendMessage("<s_red>Only players can run this command.".mm())
+    @Synchronized
+    fun customize(block: CloudCustomization.() -> Unit) {
+        if (applied) {
+            Logger.warn("customize() was called after commands were registered and was ignored; call it from setupCloud.")
+            return
         }
+        customization.block()
+    }
 
-        manager.exceptionController().registerHandler(CommandExecutionException::class.java) { ctx ->
-            IncidentReporter.report(
-                "command.cloud",
-                ctx.exception().cause ?: ctx.exception()
-            )
-            ctx.context().sender().sender.sendMessage("<s_red>An internal error occurred while running that command.".mm())
-        }
+    @Synchronized
+    private fun ensureApplied() {
+        if (applied) return
+        applied = true
+        customizer.apply(customization)
     }
 
     fun register(instance: Any) {
+        ensureApplied()
         annotationParser.parse(instance)
     }
 }

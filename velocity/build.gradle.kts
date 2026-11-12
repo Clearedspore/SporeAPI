@@ -17,6 +17,7 @@ dependencies {
 
     api("org.incendo:cloud-core")
     api("org.incendo:cloud-annotations")
+    api("org.incendo:cloud-minecraft-extras")
     api("org.incendo:cloud-velocity")
     api("org.incendo:cloud-kotlin-coroutines-annotations")
 }

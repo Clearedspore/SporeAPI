@@ -11,5 +11,11 @@ dependencies {
     api("net.kyori:adventure-text-minimessage:5.2.0")
     api("net.kyori:adventure-text-serializer-legacy:5.2.0")
 
+    compileOnly(platform("org.incendo:cloud-bom:2.1.0"))
+    compileOnly(platform("org.incendo:cloud-minecraft-bom:2.0.0"))
+    compileOnly("org.incendo:cloud-core")
+    compileOnly("org.incendo:cloud-annotations")
+    compileOnly("org.incendo:cloud-minecraft-extras")
+
     implementation("com.github.ben-manes.caffeine:caffeine:3.3.1")
 }

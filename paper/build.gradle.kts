@@ -18,6 +18,7 @@ dependencies {
 
     api("org.incendo:cloud-core")
     api("org.incendo:cloud-annotations")
+    api("org.incendo:cloud-minecraft-extras")
     api("org.incendo:cloud-paper")
     api("org.incendo:cloud-brigadier")
     api("org.incendo:cloud-kotlin-coroutines-annotations")
